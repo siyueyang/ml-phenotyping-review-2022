@@ -11,7 +11,7 @@ We performed all analyses using R version 4.1.0 and a variety of packages for da
 
 - [Web of Science data](https://github.com/siyueyang/ml-phenotyping-review-2022/blob/main/data/webofscience20220414.csv). 
 
-## Codes
+## R code
 
 - [Merging](https://github.com/siyueyang/ml-phenotyping-review-2022/blob/main/report/1-merging.pdf): Merge search results from PubMed and Web of Science. 
 

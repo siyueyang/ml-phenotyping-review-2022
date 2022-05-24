@@ -1,0 +1,115 @@
+---
+title: "Exclude articles not relevant to EHR-based automated phenotyping"
+author: "Siyue Yang, Jessica Gronsbell"
+date: "05/18/2022"
+output: pdf_document
+knit: (function(inputFile, encoding) {
+      out_dir <- "../report";
+      rmarkdown::render(inputFile,
+                        encoding=encoding,
+                        output_dir=file.path(dirname(inputFile), out_dir))})
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(kableExtra)
+```
+
+```{r}
+df <- read.csv("../data/annotations050822.csv", skip = 1)
+```
+
+After merged articles of PubMed and Web of Sciences by `1-merging.rmd`, there are 852 papers.  
+
+```{r}
+init <- df %>% 
+  group_by(Source) %>%
+  summarise(n = n()) 
+
+init <- init %>%
+  add_row(Source = "Total", n = sum(init$n)) 
+
+init %>%
+  kbl(booktabs = T, caption = "Number of papers included after merging papers from two database") %>%
+  kable_paper("striped") %>%
+  kable_styling(position = "center", latex_options = "HOLD_position")
+```
+
+We annotated based on the `annotations050822.csv` file. Our analysis consists of 3 steps:
+
+- **Screen for title and abstract** and exclude the papers by our inclusion or exclusion criteria. 
+- **Screen for full-text** and exclude the papers by the same inclusion and exclusion criteria. 
+- **Include relevant papers** that are cited by papers in our pool or we encountered in our previous work.
+
+```{r}
+## Step 1: Title and abstract review. 
+step1 <- df %>%
+  group_by(Primary_reason_for_exclusion_TA_SY) %>%
+  summarise(n = n()) %>%
+  filter(Primary_reason_for_exclusion_TA_SY != "")
+
+colnames(step1) <- c("Primary reason for exclusion", "N") 
+```
+
+```{r}
+## Step 2: Full-text review. 
+step2 <- df %>%
+  filter(Include_FR_SY == 0) %>%
+  group_by(Primary_reason_for_exclusion_FR_SY) %>%
+  summarise(n = n()) 
+
+colnames(step2) <- c("Primary reason for exclusion", "N") 
+```
+
+```{r}
+exclusion <- merge(step1, step2, by = "Primary reason for exclusion", all = TRUE)
+colnames(exclusion) <- c("Primary reason for exclusion", "Title and abstract review", "Full-text review")
+
+# Replace NA with 0.
+exclusion <- exclusion %>%
+  mutate_all(funs(replace_na(., 0))) %>%
+  mutate(Total = `Title and abstract review` + `Full-text review`) 
+
+exclusion %>%
+  add_row(`Primary reason for exclusion` = "Total", 
+          `Title and abstract review` = sum(exclusion$`Title and abstract review`), 
+          `Full-text review` = sum(exclusion$`Full-text review`),
+          `Total` = sum(exclusion$Total)) %>%
+  kbl(booktabs = T, caption = "Number of papers excluded") %>%
+  kable_paper("striped") %>%
+  kable_styling(position = "center", latex_options = "HOLD_position")
+```
+
+We also report the number of papers removed in Table 3. 
+
+```{r}
+before_screnning <- init %>%
+  filter(Source == "Total") %>%
+  select(n) %>%
+  pull()
+
+excluded_title <- sum(exclusion$`Title and abstract review`)
+
+excluded_full_text <- sum(exclusion$`Full-text review`)
+
+process <- c("Before screening", "Title and abstract review", "Full-text review")
+removed <- c(0, excluded_title, excluded_full_text)
+added <- c(0, 0, 0)
+remained <- c(before_screnning, 
+              before_screnning - excluded_title, 
+              before_screnning - excluded_title - excluded_full_text) 
+
+fig_1 <- data.frame(process, removed, added, remained)
+
+colnames(fig_1) <- c("Process", "Number of papers removed", "Number of papers added", "Number of paeprs remained")
+
+fig_1 %>%
+  kbl(booktabs = T, caption = "Number of paper removed and added") %>%
+  kable_paper("striped") %>%
+  kable_styling(position = "center", latex_options = c("scale_down", "HOLD_position"))
+```

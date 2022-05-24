@@ -1,0 +1,293 @@
+---
+title: "A summary of EHR-based phenotyping article annotation"
+author: "Siyue Yang, Jessica Gronsbell"
+date: "05/18/2022"
+output: 
+  pdf_document:
+    toc: true
+    number_sections: true
+knit: (function(inputFile, encoding) {
+      out_dir <- "../report";
+      rmarkdown::render(inputFile,
+                        encoding=encoding,
+                        output_dir=file.path(dirname(inputFile), out_dir))})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r, eval = T}
+# Load necessary packages
+library(ggplot2)
+library(tidyverse)
+library(kableExtra)
+library(ggsci)
+library(grid)
+library(gridExtra)
+library(ggvenn)
+library(cowplot)
+
+# Functions for analysis
+source('analysis_functions.R')
+```
+
+```{r, eval = T}
+# Read in annotation file
+df_all <- read.csv("../data/annotations050822.csv", skip = 1)
+df <- df_all %>% filter(Include_FR_SY == 1)
+
+# Create variable indicating use of unstructured data
+df$Unstructured <- (df$Unstructured_data_type != "")
+
+# Create variable indicating use of structured data
+df$Structured <- (df$Structured_data_type != "")
+
+# Create variable indicating types of data
+df$Data_type[df$Structured == 1] <- "Structured"
+df$Data_type[df$Unstructured == 1] <- "Unstructured"
+df$Data_type[df$Unstructured + df$Structured == 2] <- "Both"
+
+# Create variable indicating use of traditional ML method
+df$Traditional[df$DL == ''] <- "Traditional"
+df$Traditional[df$DL != ''] <- "Deep learning"
+```
+
+\clearpage
+# Overview 
+
+```{r}
+stacked_bar(df, "ML_type", "Traditional")
+```
+
+## Traditional ML method 
+
+```{r}
+# Traditional ML method.
+method_unnested <- unnest_string_var(df, "Traditional_ML_method")
+print_tables(method_unnested, "ML_type", "Traditional_ML_method_unnested", top_count = 10,
+             title = "Common traditional machine learning methods (Count > 1)")
+print_multiple_items(method_unnested, "traditional machine learning methods")
+```
+
+## DL method
+
+```{r}
+# DL method. 
+method_unnested <- unnest_string_var(df, "DL_method")
+print_tables(method_unnested, "DL_method_unnested", "ML_type", top_count = 10,
+             title = "Deep learning methods")
+print_multiple_items(method_unnested, "deep learning methods")
+```
+
+
+```{r}
+traditional_supervised <- df %>% filter(ML_type == "Supervised") %>% filter(DL_method == '')
+deep_supervised <- df %>% filter(ML_type == "Supervised") %>% filter(DL_method != '')
+semi_supervised <- df %>% filter(ML_type == "Semi-supervised") 
+weakly_supervised <- df %>% filter(ML_type == "Weakly-supervised") 
+un_supervised <- df %>% filter(ML_type == "Unsupervised") 
+
+traditional_supervised$Category <- "Traditional supervised"
+deep_supervised$Category <- "Deep supervised"
+semi_supervised$Category <- "Semi-supervised"
+weakly_supervised$Category <- "Weakly-supervised"
+un_supervised$Category <- "Unsupervised"
+```
+
+### Deep neural network variants
+
+```{r, fig.height=6}
+method_unnested <- unnest_string_var(deep_supervised, "RNN_subname")
+p1 <- horizontal_bar(method_unnested, "RNN_subname_unnested", title = "RNN", ylim = 10)
+
+method_unnested <- unnest_string_var(deep_supervised, "CNN_subname")
+p2 <- horizontal_bar(method_unnested, "CNN_subname_unnested", title = "CNN", ylim = 10)
+
+method_unnested <- unnest_string_var(deep_supervised, "BERT_subname")
+p3 <- horizontal_bar(method_unnested, "BERT_subname_unnested", title = "BERT", ylim = 10)
+
+method_unnested <- unnest_string_var(deep_supervised, "FFNN_subname")
+p4 <- horizontal_bar(method_unnested, "FFNN_subname_unnested", title = "FFNN", ylim = 10)
+
+plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2, align = "v", axis = "l")
+```
+
+
+\clearpage 
+# Phenotype
+
+```{r, fig.height = 8}
+# Phenotype - non-competition
+p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE,
+                     top_count = 5, title = "Traditional supervised learning")
+p2 <- plot_top_pheno(deep_supervised, label_text = FALSE,       
+                     top_count = 5, title = "Deep supervised learning")
+p3 <- plot_top_pheno(semi_supervised, label_text = FALSE,        
+                     top_count = 5, title = "Semi-supervised learning")
+p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE,     
+                     top_count = 5, title = "Weakly-supervised learning")
+p5 <- plot_top_pheno(un_supervised, label_text = FALSE,         
+                     top_count = 5, title = "Unsupervised learning", 
+                     string_wrap = 25, ylim = 5, restrict_count = TRUE, 
+                     groupvar_stack = "Pheno_cluster_category")
+p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
+
+legend <- get_legend(p5)                    
+plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
+```
+
+\clearpage
+# Data source
+
+## Summary
+
+```{r}
+data_source <- rbind(traditional_supervised, deep_supervised, 
+                     semi_supervised, weakly_supervised, un_supervised)
+data_source$Category <- factor(data_source$Category, levels = c("Traditional supervised", 
+                                                                "Deep supervised", 
+                                                                "Semi-supervised", 
+                                                                "Weakly-supervised", 
+                                                                "Unsupervised"))
+
+plot_data_source(data_source, "Data_type", facet = TRUE, facet_var = "Category")
+```
+
+```{r}
+print_summary_stats(df, method_type = "machine learning models")
+```
+
+## Structured and unstructured data type
+
+```{r}
+data_unnested <- unnest_string_var(df, "Data_type")
+print_tables(data_unnested, "Data_type", top_count = 10,
+             title = "Types of data used.")
+```
+
+```{r, fig.height=8}
+data_unnested <- unnest_string_var(df %>% filter(Structured == 1), "Structured_data_type")
+p1 <- horizontal_bar(data_unnested, "Structured_data_type_unnested", 
+                     string_wrap = 20,restrict_count = TRUE, 
+                     title = "Structured data type (Count > 1)", ylim = 60, label_text = TRUE)
+
+print_multiple_items(data_unnested, "structured data type")
+
+data_unnested <- unnest_string_var(df %>% filter(Unstructured == 1), "Unstructured_data_type")
+p2 <- horizontal_bar(data_unnested, "Unstructured_data_type_unnested", 
+                     string_wrap = 20, restrict_count = TRUE, 
+                     title = "Unstructured data type (Count > 1)", ylim = 60, label_text = TRUE)
+print_multiple_items(data_unnested, "unstructured data type")
+
+plot_grid(p1, p2, ncol = 1, align = "v", axis = "l")
+```
+
+\clearpage
+### Traditional supervised learning
+
+```{r}
+# Key summary stats
+print_summary_stats(traditional_supervised, method_type = "traditional supervised learning")
+```
+
+### Deep supervised learning
+
+```{r}
+print_summary_stats(deep_supervised, method_type = "deep supervised learning")
+```
+
+### Semi-supervised learning
+
+```{r}
+print_summary_stats(semi_supervised, method_type = "semi-supervised learning")
+```
+
+### Weakly-supervised learning
+
+```{r}
+print_summary_stats(weakly_supervised, method_type = "weakly-supervised learning")
+```
+
+### Unsupervised learning
+
+```{r}
+print_summary_stats(un_supervised, method_type = "unsupervised learning")
+```
+
+## Openly-available data
+
+```{r}
+method_unnested <- unnest_string_var(df, "Competition_data_name")
+print_tables(method_unnested, "Competition_data_name_unnested", 
+             restric_count = FALSE, top_count = 10)
+print_multiple_items(method_unnested, "Competition data")
+```
+
+```{r}
+stacked_bar(method_unnested %>% filter(Competition_data_name != ""), 
+            "Competition_data_name", "Traditional", string_wrap = 20)
+```
+
+
+```{r}
+method_unnested <- unnest_string_var(df, "Data_source")
+open_data <- c("MIMIC-III database", "MTSamples database")
+method_unnested <- method_unnested %>% filter(Data_source_unnested %in% open_data)
+
+print_tables(method_unnested, "Data_source_unnested", restric_count = FALSE, top_count = 10)
+print_multiple_items(method_unnested, "Openly data")
+```
+
+```{r, eval = F}
+stacked_bar(method_unnested, "Data_source_unnested", "Traditional", string_wrap = 20)
+```
+
+
+# NLP software
+
+```{r}
+method_unnested <- unnest_string_var(df, "NLP_software")
+print_tables(method_unnested, "NLP_software_unnested", top_count = 10)
+print_multiple_items(method_unnested, "NLP software")
+```
+
+# Emebddings
+
+```{r}
+method_unnested <- unnest_string_var(deep_supervised, "Embedding_training_data")
+print_tables(method_unnested, "Embedding_training_data_unnested", top_count = 10)
+print_multiple_items(method_unnested, "embedding training data")
+
+method_unnested <- unnest_string_var(deep_supervised, "Embedding")
+print_tables(method_unnested, "Embedding_unnested", top_count = 10)
+print_multiple_items(method_unnested, "embedding training methods")
+```
+
+# Validation and comparison
+
+```{r}
+method_unnested <- unnest_string_var(df, "Model_performance_metrics")
+print_tables(method_unnested, "Model_performance_metrics_unnested", top_count = 8) 
+```
+
+## Traditonal supervised ML vs. rule-based
+
+```{r, fig.height=6}
+validate_metrics(traditional_supervised, comparator = "rule")
+```
+
+## Deep supervised ML vs. supervised
+
+```{r, fig.height = 8}
+validate_metrics(deep_supervised, comparator = "deep")
+```
+
+# Reporting
+
+```{r}
+cat("There are", sum(df$Reported_demographics == 1, na.rm = T), "papers reported demographcis", 
+    sum(df$Reported_demographics == 1, na.rm = T)/nrow(df)) 
+```
+
+

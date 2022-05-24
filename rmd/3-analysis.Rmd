@@ -267,11 +267,6 @@ print_multiple_items(method_unnested, "embedding training methods")
 
 # Validation and comparison
 
-```{r}
-method_unnested <- unnest_string_var(df, "Model_performance_metrics")
-print_tables(method_unnested, "Model_performance_metrics_unnested", top_count = 8) 
-```
-
 ## Traditonal supervised ML vs. rule-based
 
 ```{r, fig.height=6}
@@ -284,11 +279,18 @@ validate_metrics(traditional_supervised, comparator = "rule")
 validate_metrics(deep_supervised, comparator = "deep")
 ```
 
+```{r}
+method_unnested <- unnest_string_var(df, "Model_performance_metrics")
+print_tables(method_unnested, "Model_performance_metrics_unnested", top_count = 8) 
+```
+
 # Reporting
 
 ```{r}
-cat("There are", sum(df$Reported_demographics == 1, na.rm = T), "papers reported demographcis", 
-    sum(df$Reported_demographics == 1, na.rm = T)/nrow(df)) 
+cat("There are", sum(df$Reported_demographics == 1, na.rm = T), "papers reported demographcis,", 
+    round(sum(df$Reported_demographics == 1, na.rm = T)/nrow(df), 4), "\n") 
+cat("There are", sum(df$Open_code == 1, na.rm = T), "papers reported demographcis,", 
+    round(sum(df$Open_code == 1, na.rm = T)/nrow(df), 4)) 
 ```
 
 

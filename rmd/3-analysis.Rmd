@@ -12,6 +12,7 @@ knit: (function(inputFile, encoding) {
                         encoding=encoding,
                         output_dir=file.path(dirname(inputFile), out_dir))})
 ---
+s
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)

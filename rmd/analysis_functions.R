@@ -225,6 +225,10 @@ print_summary_stats <- function(df, method_type = "traditional supervised learni
               'papers using', method_type, 'with unstructured data'))
   
   print(paste('There are', 
+              nrow(df %>% filter(Unstructured == TRUE & NLP_software != "")), 
+              'papers using', method_type, 'with NLP software'))
+  
+  print(paste('There are', 
               nrow(df %>% filter(Competition_data_name != '')), 
               'papers using', method_type, 'with competition data'))
   
@@ -239,6 +243,18 @@ print_summary_stats <- function(df, method_type = "traditional supervised learni
   print(paste('There are', 
               nrow(df %>% filter(Multi_sites_data == 0 & Openly_available_data == 0)), 
               'papers using', method_type, 'with data from private single site'))
+  
+  print('-----------------------------')
+  
+  print(paste('There are', 
+              nrow(df %>% filter(Compare_with_rule_based != "")), 
+              'papers', method_type, 'compared with rule-based algorithms'))
+  
+  print(paste('There are', 
+              nrow(df %>% filter(Compare_with_traditional_ML != "")), 
+              'papers', method_type, 'compared with traditional ML algorithms'))
+  
+  print('-----------------------------')
   
   print(paste('There are', 
               nrow(df %>% filter(Reported_demographics == 1)), 
@@ -287,18 +303,16 @@ validate_metrics <- function(df, comparator = "rule") {
   if (comparator == "rule") {
 
     df$Phenotype[df$PMID == 31622801] <- "Obesity and multiple comorbidities"
-    df$Phenotype <- str_wrap(df$Phenotype, width = 20)
+
     
     plot_rule_compare(df)
     
   } else {
     
-    
     df$Phenotype[df$PMID == 34514351] <- "Other social determinants of health"
     df$Phenotype[df$PMID == 35007754] <- "Other social determinants of health"
     df$Phenotype[df$PMID == 34791302] <- "Aspects of frailty"
     
-    df$Phenotype <- str_wrap(df$Phenotype, width = 20)
     df <- df %>% filter(Best_performing_model != "")
     df <- unnest_validate_string(df) 
     
@@ -350,6 +364,8 @@ ml_rule_metrics <- function(df, metric = "Sensitivity") {
   metric_best <- paste0("Best_performing_", metric)
   metric_ml <- paste0("Best_comparator_traditional_", metric)
   metric_rule <- paste0("Best_comparator_Rule_", metric)
+  
+  df$Phenotype <- str_wrap(df$Phenotype, width = 25)
 
   df %>%
     filter(Best_performing_model != "") %>%
@@ -378,6 +394,8 @@ ml_deep_metrics <- function(df, metric = "Sensitivity") {
   metric_ml <- paste0("Best_comparator_traditional_", metric)
   metric_deep <- paste0("Best_comparator_DL_", metric)
   
+  df$Phenotype <- str_wrap(df$Phenotype, width = 25)
+  
   df %>%
     filter(Best_performing_model != "") %>%
     mutate(DL = case_when(str_detect(Best_performing_model, "DL") ~ as.numeric(!!sym(metric_best)),
@@ -385,7 +403,6 @@ ml_deep_metrics <- function(df, metric = "Sensitivity") {
     mutate(ML = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
                           TRUE ~ as.numeric(!!sym(metric_ml)))) %>%
     pivot_longer(cols = c(ML, DL),names_to = "Method", values_to = metric) %>%
-   # unite(Phenotype, c(Phenotype, PMID)) %>%
     dplyr::select(Phenotype, !!sym(metric), Method) %>%
     mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) %>%
     ggplot(aes(x = Phenotype, y = as.numeric(!!sym(metric)), color = Method)) +

@@ -160,7 +160,7 @@ print_summary_stats(df, method_type = "machine learning models")
 
 ## Structured and unstructured data type
 
-```{r}
+```{r, eval = F}
 data_unnested <- unnest_string_var(df, "Data_type")
 print_tables(data_unnested, "Data_type", top_count = 10,
              title = "Types of data used.")

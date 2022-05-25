@@ -169,6 +169,35 @@ g1 <- plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align =
 ggsave(g1, file="../figure/fig2.eps", width=35, height=40, units="cm", dpi=600) 
 ```
 
+## More nuanced phenotype
+
+```{r, eval = F}
+# All phenotype with count > 1.
+temporal_unnested <- unnest_string_var(df, "Phenotype")
+horizontal_bar(temporal_unnested, "Phenotype_unnested", 
+               restrict_count = TRUE,
+               ylim = 10,
+               legend_cap = "Temporal phenotype category")
+```
+
+```{r, fig.height=8}
+sdoh_unnested <- unnest_two_string(df %>% filter(Pheno_SDOH >= 1), 
+                                   c("Phenotype", "Pheno_SDOH_category"), utility = "sdoh")
+p1 <- horizontal_bar(sdoh_unnested, "Phenotype", 
+               "Pheno_SDOH_category", 
+               restrict_count = FALSE, 
+               ylim = 8, 
+               legend_cap = "SDOH category")
+
+temporal_unnested <- unnest_string_var(df %>% filter(Pheno_temporal >= 1), "Phenotype")
+p2 <- horizontal_bar(temporal_unnested, "Phenotype_unnested", 
+               "Pheno_temporal_category",
+               restrict_count = FALSE, 
+               ylim = 2, 
+               legend_cap = "Temporal phenotype category")
+
+plot_grid(p1, p2, ncol = 1, align = "v", axis = "l")
+```
 
 \clearpage
 # Data source
@@ -270,7 +299,7 @@ print_multiple_items(method_unnested, "Competition data")
 print_tables(method_unnested, "Competition_data_name_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
 
-```{r}
+```{r, eval = F}
 stacked_bar(method_unnested %>% filter(Competition_data_name != ""), 
             "Competition_data_name", "Traditional", string_wrap = 20)
 ```

@@ -45,7 +45,8 @@ horizontal_bar <- function(df,
                            label_text = TRUE, 
                            title = NULL,
                            string_wrap = NA,
-                           large_fig = FALSE){
+                           large_fig = FALSE,
+                           legend_cap = "Unsupervised phenotype category"){
   
   # To split the label text if it is too long. 
   if (!is.na(string_wrap)) {
@@ -94,7 +95,7 @@ horizontal_bar <- function(df,
     theme_classic() + 
     coord_flip() + 
     labs(title = title, y = "", x = "") +
-    guides(fill = guide_legend(title = "Unsupervised phenotype category")) +
+    guides(fill = guide_legend(title = legend_cap)) +
     theme(legend.position = "right")
   
   
@@ -360,11 +361,12 @@ print_tables <- function(df,
 
   colnames(df)[1] <- str_c(new_name[-length(new_name)], collapse = " ")
   
-  new_name <- strsplit(colnames(df)[2], "_")
-  new_name <- new_name[[1]] 
-  colnames(df)[2] <- str_c(new_name[-length(new_name)], collapse = " ")
+  if (!is.na(groupvar_stack) & is.na(groupvar_stack2)) {
+    new_name <- strsplit(colnames(df)[2], "_")
+    new_name <- new_name[[1]] 
+    colnames(df)[2] <- str_c(new_name[-length(new_name)], collapse = " ")
+  }
 
- 
   # To split the label text if it is too long. 
   if (!is.na(groupvar_stack2)) {
     
@@ -487,7 +489,7 @@ unnest_validate_string <- function(df) {
 }
 
 # Function to separate phenotype and validation metrics by pair. 
-unnest_two_string <- function(df, vars = c("Phenotype", "Best_performing_Sensitivity")) {
+unnest_two_string <- function(df, vars = c("Phenotype", "Best_performing_Sensitivity"), utility = "validation") {
   
   # Check if there is a paper with record of multiple values of a single phenotype. 
   # e.g. PMID 29447188 has 10 phenotypes and 10 sensitivity values. 
@@ -506,40 +508,78 @@ unnest_two_string <- function(df, vars = c("Phenotype", "Best_performing_Sensiti
   df_split <- df %>% filter(PMID %in% pmid_split)
   df_remain <- subset(df, !(PMID %in% pmid_split))
   
-  # If there is no record with multiple values for a single metric, return itself.  
-  if (nrow(df_split) == 0) {
-    res <- df_remain %>% select(PMID, Best_performing_model, Phenotype, !!sym(vars[2])) %>% na.omit()
+  if (utility == "validation") {
+    # If there is no record with multiple values for a single metric, return itself.  
+    if (nrow(df_split) == 0) {
+      res <- df_remain %>% select(PMID, Best_performing_model, Phenotype, !!sym(vars[2])) %>% na.omit()
       
-  # Otherwise, split the validation metrics by phenotypes.   
-  } else {
-    for (var in vars) {
-      # From library splitstackshape.
-      df_split <- cSplit(df_split, c(var), sep = ";")
-    }
-    
-    n_pheno <- dim(df_split %>% select(starts_with(paste0(vars[1], "_"))))[2]
-    n_metric <- dim(df_split %>% select(starts_with(paste0(vars[2], "_"))))[2]
-    
-    end_pname <- paste0("_0", c(1:9))
-    end_pname <- c(end_pname, paste0("_", c(10:25)))
-    end_mname <- paste0("_", c(1:25))
-    
-    res <- c()
-    for (i in c(1:n_pheno)) {
-      tmp <- df_split %>% select(PMID, Best_performing_model, ends_with(end_pname[i]), ends_with(end_mname[i])) 
-      
-      if (dim(tmp)[2] != 4) {
-        break
+      # Otherwise, split the validation metrics by phenotypes.   
+    } else {
+      for (var in vars) {
+        # From library splitstackshape.
+        df_split <- cSplit(df_split, c(var), sep = ";")
       }
-      colnames(tmp) <- c("PMID", "Best_performing_model", vars)
-      res <- rbind(res, tmp)
+      
+      n_pheno <- dim(df_split %>% select(starts_with(paste0(vars[1], "_"))))[2]
+      n_metric <- dim(df_split %>% select(starts_with(paste0(vars[2], "_"))))[2]
+      
+      end_pname <- paste0("_0", c(1:9))
+      end_pname <- c(end_pname, paste0("_", c(10:100)))
+      end_mname <- paste0("_", c(1:100))
+      
+      res <- c()
+      for (i in c(1:n_pheno)) {
+        tmp <- df_split %>% select(PMID, Best_performing_model, ends_with(end_pname[i]), ends_with(end_mname[i])) 
+        
+        if (dim(tmp)[2] != 4) {
+          break
+        }
+        colnames(tmp) <- c("PMID", "Best_performing_model", vars)
+        res <- rbind(res, tmp)
+      }
+      
+      df_remain[, vars[2]] <- as.numeric(df_remain[, vars[2]])
+      
+      res <- df_remain %>% select(PMID, Best_performing_model, Phenotype, !!sym(vars[2])) %>%
+        bind_rows(res) %>%
+        na.omit()
+    } 
+  } else {
+    # If there is no record with multiple values for a single, return itself.  
+    if (nrow(df_split) == 0) {
+      res <- df_remain %>% select(PMID, Phenotype, !!sym(vars[2])) %>% na.omit()
+      
+      # Otherwise, split the by phenotypes.   
+    } else {
+      
+      # From library splitstackshape.
+      for (var in vars) {
+        # From library splitstackshape.
+        df_split <- cSplit(df_split, c(var), sep = ";")
+      }
+      
+      n_pheno <- dim(df_split %>% select(starts_with(paste0(vars[1], "_"))))[2]
+      n_metric <- dim(df_split %>% select(starts_with(paste0(vars[2], "_"))))[2]
+      
+      end_pname <- paste0("_0", c(1:9))
+      end_pname <- c(end_pname, paste0("_", c(10:25)))
+      end_mname <- paste0("_", c(1:25))
+      
+      res <- c()
+      for (i in c(1:n_pheno)) {
+        tmp <- df_split %>% select(PMID, ends_with(end_pname[i]), ends_with(end_mname[i])) 
+        
+        colnames(tmp) <- c("PMID", vars)
+        res <- rbind(res, tmp)
+      }
+
+      res2 <- unnest_string_var(df_remain, "Phenotype") %>% 
+        select(PMID, Phenotype_unnested, !!sym(vars[2]))
+     
+      colnames(res2) <- c("PMID", vars) 
+      
+      res <- res %>% bind_rows(res2) %>% na.omit()
     }
-    
-    df_remain[, vars[2]] <- as.numeric(df_remain[, vars[2]])
-    
-    res <- df_remain %>% select(PMID, Best_performing_model, Phenotype, !!sym(vars[2])) %>%
-      bind_rows(res) %>%
-      na.omit()
   }
   
   return(res)

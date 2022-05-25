@@ -322,34 +322,65 @@ print_tables <- function(df,
                          groupvar_stack2 = NA,
                          title = NA, 
                          top_count = 5, 
-                         restric_count = TRUE) {
+                         restric_count = TRUE,
+                         col_width = 5) {
   
   if (is.na(groupvar_stack)) {
     df <- df %>%
       group_by(!!sym(group_var)) %>%
-      summarise(Count = n()) 
+      summarise(Count = n()) %>%
+      slice_max(order_by = Count, n = top_count)
+    
+    if (restric_count) df <- df %>% filter(Count > 1)
     
   } else if (is.na(groupvar_stack2)) {
     df <- df %>%
       group_by(!!sym(group_var), !!sym(groupvar_stack)) %>%
-      summarise(Count = n()) 
+      summarise(Count = n()) %>%
+      slice_max(order_by = Count, n = top_count)
+    
+    if (restric_count) df <- df %>% filter(Count > 1)
     
   } else {
+    df1 <- df %>%
+      group_by(!!sym(group_var)) %>%
+      summarise(Count = n()) %>%
+      slice_max(order_by = Count, n = top_count) %>% 
+      filter(Count > 1)
+    
     df <- df %>%
       group_by(!!sym(group_var), !!sym(groupvar_stack), !!sym(groupvar_stack2)) %>%
-      summarise(Count = n()) 
+      summarise(Count = n()) %>%
+      pivot_wider(names_from = c("ML_type", "Traditional"), values_from = "Count", names_sep = " ", values_fill = 0) %>%
+      inner_join(df1)
+  }
+  
+  new_name <- strsplit(colnames(df)[1], "_")
+  new_name <- new_name[[1]] 
+
+  colnames(df)[1] <- str_c(new_name[-length(new_name)], collapse = " ")
+  
+  new_name <- strsplit(colnames(df)[2], "_")
+  new_name <- new_name[[1]] 
+  colnames(df)[2] <- str_c(new_name[-length(new_name)], collapse = " ")
+
+ 
+  # To split the label text if it is too long. 
+  if (!is.na(groupvar_stack2)) {
     
+    num_col <- ncol(df) 
+    
+    df %>% 
+      kbl(booktabs = T, caption = title) %>%
+      kable_paper("striped") %>%
+      kable_styling(position = "center", latex_options = "HOLD_position") %>%
+      column_spec(c(1:num_col), width = paste0(col_width, "em"))
+  } else {
+    df %>% 
+      kbl(booktabs = T, caption = title) %>%
+      kable_paper("striped") %>%
+      kable_styling(position = "center", latex_options = "HOLD_position") 
   }
-  
-  if (restric_count) {
-    df <- df %>% filter(Count > 1)
-  }
-  
-  df %>% 
-    slice_max(order_by = Count, n = top_count) %>%
-    kbl(booktabs = T, caption = title) %>%
-    kable_paper("striped") %>%
-    kable_styling(position = "center", latex_options = "HOLD_position") 
 }
 
 

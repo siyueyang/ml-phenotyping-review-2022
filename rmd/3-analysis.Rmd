@@ -209,8 +209,7 @@ print_summary_stats(df, method_type = "machine learning models")
 
 ```{r, eval = F}
 data_unnested <- unnest_string_var(df, "Data_type")
-print_tables(data_unnested, "Data_type", top_count = 10,
-             title = "Types of data used.")
+print_tables(data_unnested, "Data_type", top_count = 10, title = "Types of data used.")
 ```
 
 ```{r, fig.height=8}
@@ -266,8 +265,6 @@ print_summary_stats(un_supervised, method_type = "unsupervised learning")
 
 ```{r}
 method_unnested <- unnest_string_var(df, "Competition_data_name")
-print_tables(method_unnested, "Competition_data_name_unnested", 
-             restric_count = FALSE, top_count = 10)
 print_multiple_items(method_unnested, "Competition data")
 
 print_tables(method_unnested, "Competition_data_name_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
@@ -294,7 +291,6 @@ print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", 
 
 ```{r}
 method_unnested <- unnest_string_var(df, "NLP_software")
-print_tables(method_unnested, "NLP_software_unnested", top_count = 10)
 print_multiple_items(method_unnested, "NLP software")
 print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
@@ -327,7 +323,7 @@ g4 <- plot_validate_metrics(traditional_supervised, comparator = "rule", large_f
 ggsave(g4, file="../figure/fig4.eps", width=30, height=30, units="cm", dpi=600) 
 ```
 
-## Deep supervised ML vs. supervised
+## Deep supervised ML vs. supervised ML
 
 ```{r, fig.height = 8}
 plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = FALSE)
@@ -338,11 +334,10 @@ g5 <- plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = TR
 ggsave(g5, file="../figure/fig5.eps", width=30, height=35, units="cm", dpi=600) 
 ```
 
-
-
 ```{r}
 method_unnested <- unnest_string_var(df, "Model_performance_metrics")
-print_tables(method_unnested, "Model_performance_metrics_unnested", top_count = 8) 
+print_tables(method_unnested, "Model_performance_metrics_unnested", "ML_type", "Traditional", 
+             top_count = 8, restric_count = FALSE, col_width = 4.6)
 ```
 
 # Reporting

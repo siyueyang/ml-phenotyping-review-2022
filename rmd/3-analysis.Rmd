@@ -1,7 +1,7 @@
 ---
 title: "A summary of EHR-based phenotyping article annotation"
 author: "Siyue Yang, Jessica Gronsbell"
-date: "05/18/2022"
+date: "05/25/2022"
 output: 
   pdf_document:
     toc: true
@@ -102,13 +102,13 @@ method_unnested <- unnest_string_var(deep_supervised, "RNN_subname")
 p1 <- horizontal_bar(method_unnested, "RNN_subname_unnested", title = "RNN", ylim = 10)
 
 method_unnested <- unnest_string_var(deep_supervised, "CNN_subname")
-p2 <- horizontal_bar(method_unnested, "CNN_subname_unnested", title = "CNN", ylim = 10)
+p2 <- horizontal_bar(method_unnested, "CNN_subname_unnested", title = "CNN", ylim = 12)
 
 method_unnested <- unnest_string_var(deep_supervised, "BERT_subname")
 p3 <- horizontal_bar(method_unnested, "BERT_subname_unnested", title = "BERT", ylim = 10)
 
 method_unnested <- unnest_string_var(deep_supervised, "FFNN_subname")
-p4 <- horizontal_bar(method_unnested, "FFNN_subname_unnested", title = "FFNN", ylim = 10)
+p4 <- horizontal_bar(method_unnested, "FFNN_subname_unnested", title = "FFNN", ylim = 12)
 
 plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2, align = "v", axis = "l")
 ```
@@ -352,7 +352,7 @@ g4 <- plot_validate_metrics(traditional_supervised, comparator = "rule", large_f
 ggsave(g4, file="../figure/fig4.eps", width=30, height=30, units="cm", dpi=600) 
 ```
 
-## Deep supervised ML vs. supervised ML
+## Deep supervised ML vs. traditional supervised ML
 
 ```{r, fig.height = 8}
 plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = FALSE)

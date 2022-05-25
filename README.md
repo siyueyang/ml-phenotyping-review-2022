@@ -1,5 +1,5 @@
 # ml-phenotyping-review-2022
-R code for the removal of duplicates and replication of our machine learning based phentoyping scoping review. 
+R code for the removal of duplicates and replication of our machine learning based phentoyping methodical review. 
 
 We performed all analyses using R version 4.1.0 and a variety of packages for data processing, graphing and reporting. 
 

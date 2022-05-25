@@ -121,21 +121,54 @@ plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2, align = "v", axis = "l")
 # Phenotype - non-competition
 p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE,
                      top_count = 5, title = "Traditional supervised learning")
+
 p2 <- plot_top_pheno(deep_supervised, label_text = FALSE,       
                      top_count = 5, title = "Deep supervised learning")
+
 p3 <- plot_top_pheno(semi_supervised, label_text = FALSE,        
                      top_count = 5, title = "Semi-supervised learning")
+
 p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE,     
                      top_count = 5, title = "Weakly-supervised learning")
+
 p5 <- plot_top_pheno(un_supervised, label_text = FALSE,         
                      top_count = 5, title = "Unsupervised learning", 
                      string_wrap = 25, ylim = 5, restrict_count = TRUE, 
                      groupvar_stack = "Pheno_cluster_category")
-p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
 
+p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
 legend <- get_legend(p5)                    
+
 plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
 ```
+
+```{r}
+# Save figures in eps format and set large figure to TRUE.
+# Phenotype - non-competition
+p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE, large_fig = TRUE,
+                     top_count = 5, title = "Traditional supervised learning")
+
+p2 <- plot_top_pheno(deep_supervised, label_text = FALSE, large_fig = TRUE,      
+                     top_count = 5, title = "Deep supervised learning")
+
+p3 <- plot_top_pheno(semi_supervised, label_text = FALSE, large_fig = TRUE,       
+                     top_count = 5, title = "Semi-supervised learning")
+
+p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE, large_fig = TRUE,    
+                     top_count = 5, title = "Weakly-supervised learning")
+
+p5 <- plot_top_pheno(un_supervised, label_text = FALSE, large_fig = TRUE,        
+                     top_count = 5, title = "Unsupervised learning", 
+                     string_wrap = 25, ylim = 5, restrict_count = TRUE, 
+                     groupvar_stack = "Pheno_cluster_category")
+
+p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
+legend <- get_legend(p5)                    
+
+g1 <- plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
+ggsave(g1, file="../figure/fig2.eps", width=35, height=40, units="cm", dpi=600) 
+```
+
 
 \clearpage
 # Data source
@@ -152,6 +185,20 @@ data_source$Category <- factor(data_source$Category, levels = c("Traditional sup
                                                                 "Unsupervised"))
 
 plot_data_source(data_source, "Data_type", facet = TRUE, facet_var = "Category")
+```
+
+```{r}
+# Save figure in eps. 
+data_source <- rbind(traditional_supervised, deep_supervised, 
+                     semi_supervised, weakly_supervised, un_supervised)
+data_source$Category <- factor(data_source$Category, levels = c("Traditional supervised", 
+                                                                "Deep supervised", 
+                                                                "Semi-supervised", 
+                                                                "Weakly-supervised", 
+                                                                "Unsupervised"))
+
+g2 <- plot_data_source(data_source, "Data_type", facet = TRUE, facet_var = "Category", large_fig = TRUE)
+ggsave(g2, file="../figure/fig3.eps", width=40, height=20, units="cm", dpi=600) 
 ```
 
 ```{r}
@@ -222,6 +269,8 @@ method_unnested <- unnest_string_var(df, "Competition_data_name")
 print_tables(method_unnested, "Competition_data_name_unnested", 
              restric_count = FALSE, top_count = 10)
 print_multiple_items(method_unnested, "Competition data")
+
+print_tables(method_unnested, "Competition_data_name_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
 
 ```{r}
@@ -237,12 +286,9 @@ method_unnested <- method_unnested %>% filter(Data_source_unnested %in% open_dat
 
 print_tables(method_unnested, "Data_source_unnested", restric_count = FALSE, top_count = 10)
 print_multiple_items(method_unnested, "Openly data")
-```
 
-```{r, eval = F}
-stacked_bar(method_unnested, "Data_source_unnested", "Traditional", string_wrap = 20)
+print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
-
 
 # NLP software
 
@@ -250,9 +296,12 @@ stacked_bar(method_unnested, "Data_source_unnested", "Traditional", string_wrap 
 method_unnested <- unnest_string_var(df, "NLP_software")
 print_tables(method_unnested, "NLP_software_unnested", top_count = 10)
 print_multiple_items(method_unnested, "NLP software")
+print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
 
 # Emebddings
+
+Embeddings were only used in deep supervised articles. 
 
 ```{r}
 method_unnested <- unnest_string_var(deep_supervised, "Embedding_training_data")
@@ -269,14 +318,27 @@ print_multiple_items(method_unnested, "embedding training methods")
 ## Traditonal supervised ML vs. rule-based
 
 ```{r, fig.height=6}
-validate_metrics(traditional_supervised, comparator = "rule")
+plot_validate_metrics(traditional_supervised, comparator = "rule", large_fig = FALSE)
+```
+
+
+```{r, eval = F, results='hide'}
+g4 <- plot_validate_metrics(traditional_supervised, comparator = "rule", large_fig = TRUE)
+ggsave(g4, file="../figure/fig4.eps", width=30, height=30, units="cm", dpi=600) 
 ```
 
 ## Deep supervised ML vs. supervised
 
 ```{r, fig.height = 8}
-validate_metrics(deep_supervised, comparator = "deep")
+plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = FALSE)
 ```
+
+```{r, eval = F, results='hide'}
+g5 <- plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = TRUE)
+ggsave(g5, file="../figure/fig5.eps", width=30, height=35, units="cm", dpi=600) 
+```
+
+
 
 ```{r}
 method_unnested <- unnest_string_var(df, "Model_performance_metrics")

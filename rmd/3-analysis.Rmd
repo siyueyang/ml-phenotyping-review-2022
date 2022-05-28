@@ -45,11 +45,12 @@ df$Structured <- (df$Structured_data_type != "")
 
 # Create variable indicating types of data
 df$Data_type[df$Structured == 1] <- "Structured"
-df$Data_type[df$Unstructured == 1] <- "Unstructured"
-df$Data_type[df$Unstructured + df$Structured == 2] <- "Both"
+df$Data_type[df$Unstructured == 1] <- "Free-text"
+df$Data_type[df$Unstructured_data_language == "Non-language"] <- "Image"
+df$Data_type[df$Unstructured + df$Structured == 2] <- "Both structured and free-text"
 
 # Create variable indicating use of traditional ML method
-df$Traditional[df$DL == ''] <- "Traditional"
+df$Traditional[df$DL == ''] <- "Traditional machine learning"
 df$Traditional[df$DL != ''] <- "Deep learning"
 ```
 
@@ -57,7 +58,18 @@ df$Traditional[df$DL != ''] <- "Deep learning"
 # Overview 
 
 ```{r}
-stacked_bar(df, "ML_type", "Traditional")
+df$ML_type <- factor(df$ML_type, levels = c("Supervised", 
+                                             "Semi-supervised", 
+                                             "Weakly-supervised", 
+                                             "Unsupervised",
+                                            "Reinforcement"))
+stacked_bar(df, "ML_type", "Traditional", order_by_count = FALSE)
+```
+
+```{r, eval = F}
+# Save in eps.
+g1 <- stacked_bar(df, "ML_type", "Traditional", order_by_count = FALSE, large_fig = TRUE)
+ggsave(g1, file="../figure/fig2.eps", width=40, height=20, units="cm", dpi=600) 
 ```
 
 ## Traditional ML method 
@@ -76,7 +88,7 @@ print_multiple_items(method_unnested, "traditional machine learning methods")
 # DL method. 
 method_unnested <- unnest_string_var(df, "DL_method")
 print_tables(method_unnested, "DL_method_unnested", "ML_type", top_count = 10,
-             title = "Deep learning methods")
+             title = "Deep supervised learning methods", restric_count = TRUE)
 print_multiple_items(method_unnested, "deep learning methods")
 ```
 
@@ -119,54 +131,22 @@ plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2, align = "v", axis = "l")
 
 ```{r, fig.height = 8}
 # Phenotype - non-competition
-p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE,
-                     top_count = 5, title = "Traditional supervised learning")
-
-p2 <- plot_top_pheno(deep_supervised, label_text = FALSE,       
-                     top_count = 5, title = "Deep supervised learning")
-
-p3 <- plot_top_pheno(semi_supervised, label_text = FALSE,        
-                     top_count = 5, title = "Semi-supervised learning")
-
-p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE,     
-                     top_count = 5, title = "Weakly-supervised learning")
-
-p5 <- plot_top_pheno(un_supervised, label_text = FALSE,         
-                     top_count = 5, title = "Unsupervised learning", 
-                     string_wrap = 25, ylim = 5, restrict_count = TRUE, 
-                     groupvar_stack = "Pheno_cluster_category")
-
-p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
-legend <- get_legend(p5)                    
-
-plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
+plot_all_top_pheno(traditional_supervised,
+                               deep_supervised,
+                               semi_supervised,
+                               weakly_supervised,
+                               un_supervised)
 ```
 
 ```{r}
 # Save figures in eps format and set large figure to TRUE.
 # Phenotype - non-competition
-p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE, large_fig = TRUE,
-                     top_count = 5, title = "Traditional supervised learning")
-
-p2 <- plot_top_pheno(deep_supervised, label_text = FALSE, large_fig = TRUE,      
-                     top_count = 5, title = "Deep supervised learning")
-
-p3 <- plot_top_pheno(semi_supervised, label_text = FALSE, large_fig = TRUE,       
-                     top_count = 5, title = "Semi-supervised learning")
-
-p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE, large_fig = TRUE,    
-                     top_count = 5, title = "Weakly-supervised learning")
-
-p5 <- plot_top_pheno(un_supervised, label_text = FALSE, large_fig = TRUE,        
-                     top_count = 5, title = "Unsupervised learning", 
-                     string_wrap = 25, ylim = 5, restrict_count = TRUE, 
-                     groupvar_stack = "Pheno_cluster_category")
-
-p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
-legend <- get_legend(p5)                    
-
-g1 <- plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
-ggsave(g1, file="../figure/fig2.eps", width=35, height=40, units="cm", dpi=600) 
+g1 <- plot_all_top_pheno(traditional_supervised,
+                               deep_supervised,
+                               semi_supervised,
+                               weakly_supervised,
+                               un_supervised)
+ggsave(g1, file="../figure/fig3.eps", width=35, height=40, units="cm", dpi=600) 
 ```
 
 ## More nuanced phenotype
@@ -212,27 +192,26 @@ data_source$Category <- factor(data_source$Category, levels = c("Traditional sup
                                                                 "Semi-supervised", 
                                                                 "Weakly-supervised", 
                                                                 "Unsupervised"))
-
-plot_data_source(data_source, "Data_type", facet = TRUE, facet_var = "Category")
+data_source$Data_type <- factor(data_source$Data_type, levels = c("Structured", 
+                                                                  "Free-text",
+                                                                  "Both structured and free-text", "Image"))
+stacked_bar(data_source, "Category", "Data_type", order_by_count = FALSE) +
+  scale_y_continuous(n.breaks = 10)
 ```
 
 ```{r}
 # Save figure in eps. 
-data_source <- rbind(traditional_supervised, deep_supervised, 
-                     semi_supervised, weakly_supervised, un_supervised)
-data_source$Category <- factor(data_source$Category, levels = c("Traditional supervised", 
-                                                                "Deep supervised", 
-                                                                "Semi-supervised", 
-                                                                "Weakly-supervised", 
-                                                                "Unsupervised"))
-
-g2 <- plot_data_source(data_source, "Data_type", facet = TRUE, facet_var = "Category", large_fig = TRUE)
-ggsave(g2, file="../figure/fig3.eps", width=40, height=20, units="cm", dpi=600) 
+g2 <- stacked_bar(data_source, "Category", "Data_type", order_by_count = FALSE, large_fig = TRUE) +
+  scale_y_continuous(n.breaks = 10)
+ggsave(g2, file="../figure/fig4.eps", width=40, height=20, units="cm", dpi=600) 
 ```
 
 ```{r}
-print_summary_stats(df, method_type = "machine learning models")
+print_summary_table(list(traditional_supervised, deep_supervised, semi_supervised,
+                         weakly_supervised, un_supervised, df)) 
 ```
+
+TSL = Traditional supervised learning.  DSL = Deep supervised learning.  DRL = Reinforcement deep learning.  SSL = Semi-supervised learning.  WSL = Weakly-supervised learning.  US = Unsupervised learning. 
 
 ## Structured and unstructured data type
 
@@ -252,43 +231,14 @@ print_multiple_items(data_unnested, "structured data type")
 data_unnested <- unnest_string_var(df %>% filter(Unstructured == 1), "Unstructured_data_type")
 p2 <- horizontal_bar(data_unnested, "Unstructured_data_type_unnested", 
                      string_wrap = 20, restrict_count = TRUE, 
-                     title = "Unstructured data type (Count > 1)", ylim = 60, label_text = TRUE)
+                     title = "Free text type (Count > 1)", ylim = 60, label_text = TRUE)
 print_multiple_items(data_unnested, "unstructured data type")
 
 plot_grid(p1, p2, ncol = 1, align = "v", axis = "l")
 ```
 
 \clearpage
-### Traditional supervised learning
 
-```{r}
-# Key summary stats
-print_summary_stats(traditional_supervised, method_type = "traditional supervised learning")
-```
-
-### Deep supervised learning
-
-```{r}
-print_summary_stats(deep_supervised, method_type = "deep supervised learning")
-```
-
-### Semi-supervised learning
-
-```{r}
-print_summary_stats(semi_supervised, method_type = "semi-supervised learning")
-```
-
-### Weakly-supervised learning
-
-```{r}
-print_summary_stats(weakly_supervised, method_type = "weakly-supervised learning")
-```
-
-### Unsupervised learning
-
-```{r}
-print_summary_stats(un_supervised, method_type = "unsupervised learning")
-```
 
 ## Openly-available data
 
@@ -296,7 +246,9 @@ print_summary_stats(un_supervised, method_type = "unsupervised learning")
 method_unnested <- unnest_string_var(df, "Competition_data_name")
 print_multiple_items(method_unnested, "Competition data")
 
-print_tables(method_unnested, "Competition_data_name_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
+print_tables(method_unnested, "Competition_data_name_unnested", "ML_type", "Traditional", 
+             top_count = 10, restric_count = FALSE, hold_pos = TRUE)
+  
 ```
 
 ```{r, eval = F}
@@ -321,7 +273,7 @@ print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", 
 ```{r}
 method_unnested <- unnest_string_var(df, "NLP_software")
 print_multiple_items(method_unnested, "NLP software")
-print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
+print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10)
 ```
 
 # Emebddings
@@ -342,14 +294,14 @@ print_multiple_items(method_unnested, "embedding training methods")
 
 ## Traditonal supervised ML vs. rule-based
 
-```{r, fig.height=6}
+```{r, fig.height=8}
 plot_validate_metrics(traditional_supervised, comparator = "rule", large_fig = FALSE)
 ```
 
 
 ```{r, eval = F, results='hide'}
 g4 <- plot_validate_metrics(traditional_supervised, comparator = "rule", large_fig = TRUE)
-ggsave(g4, file="../figure/fig4.eps", width=30, height=30, units="cm", dpi=600) 
+ggsave(g4, file="../figure/fig5.eps", width=30, height=30, units="cm", dpi=600) 
 ```
 
 ## Deep supervised ML vs. traditional supervised ML
@@ -359,23 +311,30 @@ plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = FALSE)
 ```
 
 ```{r, eval = F, results='hide'}
-g5 <- plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = TRUE)
-ggsave(g5, file="../figure/fig5.eps", width=30, height=35, units="cm", dpi=600) 
+g6 <- plot_validate_metrics(deep_supervised, comparator = "deep", large_fig = TRUE)
+ggsave(g6, file="../figure/fig6.eps", width=30, height=35, units="cm", dpi=600) 
 ```
+
+
+## Weakly-supervised v.s. rule-based 
+
+```{r, fig.height = 8}
+plot_validate_metrics(weakly_supervised, comparator = "weakly", large_fig = FALSE)
+```
+
+
+
+```{r, fig.height=8}
+plot_validate_metrics(weakly_supervised, comparator = "weakly vs supervised", large_fig = FALSE)
+```
+
+
+
 
 ```{r}
 method_unnested <- unnest_string_var(df, "Model_performance_metrics")
 print_tables(method_unnested, "Model_performance_metrics_unnested", "ML_type", "Traditional", 
-             top_count = 8, restric_count = FALSE, col_width = 4.6)
-```
-
-# Reporting
-
-```{r}
-cat("There are", sum(df$Reported_demographics == 1, na.rm = T), "papers reported demographcis,", 
-    round(sum(df$Reported_demographics == 1, na.rm = T)/nrow(df), 4), "\n") 
-cat("There are", sum(df$Open_code == 1, na.rm = T), "papers reported demographcis,", 
-    round(sum(df$Open_code == 1, na.rm = T)/nrow(df), 4)) 
+             top_count = 20, restric_count = FALSE, col_width = 4.6)
 ```
 
 

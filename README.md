@@ -17,6 +17,6 @@ We performed all analyses using R version 4.1.0 and a variety of packages for da
 
 - [Exclusion](https://github.com/siyueyang/ml-phenotyping-review-2022/blob/main/report/2-exclusion.pdf): Exclude articles not relevant to EHR-based automated phentoyping. 
 
-- [Analysis](https://github.com/siyueyang/ml-phenotyping-review-2022/blob/main/report/3-analysis.pdf): A summary of EHR-based phenotyping articles using ML and NLP. 
+- [Analysis](https://github.com/siyueyang/ml-phenotyping-review-2022/blob/main/report/3-analysis.pdf): A summary of EHR-based phenotyping articles using machien leanring approaches. 
 
 

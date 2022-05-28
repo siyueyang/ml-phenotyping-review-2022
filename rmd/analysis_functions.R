@@ -301,12 +301,7 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
     
     df$Study1 <- factor(df$Study1, levels = df_sens$Study1)
     DL_better <- df_sens %>% filter(DL_better == TRUE) %>% select(Study1) %>% pull()
-    # DL_better <- DL_better[-which(DL_better == df$Study1[df$PMID == 34423259])]
-    # DL_better <- DL_better[-which(DL_better == df$Study1[df$PMID == 30266231])]
-    # DL_better <- DL_better[-which(DL_better == df$Study1[df$PMID == 29447188])]
-    
     DL_better <- c(DL_better, df$Study1[df$PMID == 32970677])
-    #ML_better <- df_sens %>% filter(DL_better == FALSE) %>% select(Study1) %>% pull()
     df_DL_better <- df %>% filter(Study1 %in% DL_better)
     df_ML_better <- df %>% filter(!(Study1 %in% DL_better))
     
@@ -345,7 +340,7 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
     df <- unnest_validate_string(df, comapartor = "weakly") 
     
     df$Phenotype[df$PMID == 29126253] <- paste0(df$Phenotype[df$PMID == 29126253], "\n (PheNorm)")
-    df$Phenotype[df$PMID == 33746080] <- paste0(df$Phenotype[df$PMID == 32374408], "\n (PheVis)")
+    #df$Phenotype[df$PMID == 33746080] <- paste0(df$Phenotype[df$PMID == 32374408], "\n (PheVis)")
     df$Phenotype[df$PMID == 32548637] <- paste0(df$Phenotype[df$PMID == 32548637], "\n (sureLDA)")
    
     df <- df %>% 
@@ -418,12 +413,14 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
   if (sum(missing_index == 1) > 0) {
     df <- df[-which(missing_index == 1), ]
   }
- 
+  
   if (comparison == "rule") {
     df <- ml_rule_metrics(df, metric)
   } else if (comparison == "weakly") {
+
     df <- weakly_rule_metrics(df, metric)
   } else {
+    
     df <- ml_deep_metrics(df, metric) 
   }
   
@@ -435,7 +432,7 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
   } else {
     p <- df %>%
       ggplot(aes(x = !!sym(study), y = as.numeric(!!sym(metric)), color = Method)) +
-      scale_x_discrete(labels = df$Phenotype) 
+      scale_x_discrete(labels = function(x) str_extract(x, ".+\\n"))
   }
   
   p <- p + scale_y_continuous(limits = c(0,1), labels = function(y) label_parsed(paste0(y*100))) +

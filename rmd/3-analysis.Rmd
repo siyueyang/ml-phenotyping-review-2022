@@ -268,6 +268,7 @@ print_multiple_items(method_unnested, "Openly data")
 print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```
 
+\clearpage
 # NLP software
 
 ```{r}
@@ -316,20 +317,20 @@ ggsave(g6, file="../figure/fig6.eps", width=30, height=35, units="cm", dpi=600)
 ```
 
 
-## Weakly-supervised v.s. rule-based 
+## Weakly-supervised ML vs. rule-based algorithms
 
 ```{r, fig.height = 8}
 plot_validate_metrics(weakly_supervised, comparator = "weakly", large_fig = FALSE)
 ```
 
-
+## Weakly-supervised ML vs. traditional supervised ML
 
 ```{r, fig.height=8}
 plot_validate_metrics(weakly_supervised, comparator = "weakly vs supervised", large_fig = FALSE)
 ```
 
 
-
+# Model performance metric reporting
 
 ```{r}
 method_unnested <- unnest_string_var(df, "Model_performance_metrics")

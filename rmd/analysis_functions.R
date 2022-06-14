@@ -76,14 +76,17 @@ horizontal_bar <- function(df,
       summarise(Count = n()) %>%
       mutate(n = Count)
   } else {
+    
+    df[, legend_cap] <- df[, groupvar_stack]
+    
     temp_df <- df %>%
       group_by(!!sym(group_var)) %>%
       mutate(n = n()) %>%
-      group_by(!!sym(group_var), !!sym(groupvar_stack)) %>%
+      group_by(!!sym(group_var), !!sym(legend_cap)) %>%
       summarise(n = mean(n), Count = n()) 
   }
   
-  # If restric the count of the major category of `group_var`.
+  # If restrict the count of the major category of `group_var`.
   if (restrict_count) {
     temp_df <- temp_df %>% filter(n > 1) 
   }
@@ -102,7 +105,7 @@ horizontal_bar <- function(df,
     }
      
   } else {
-    p <- ggplot(data=temp_df, aes(x=reorder(!!sym(group_var), -Count, sum), y=Count, fill = !!sym(groupvar_stack))) + geom_bar(stat="identity") 
+    p <- ggplot(data=temp_df, aes(x=reorder(!!sym(group_var), -Count, sum), y=Count, alpha = !!sym(legend_cap))) + geom_bar(stat="identity") 
   }
   
   # Label the number on top of the bars. 
@@ -110,15 +113,20 @@ horizontal_bar <- function(df,
     p <- p + geom_text(aes(label = Count), position = position_dodge(width = 0.9), hjust = -0.5, size = 3) 
   }
   
-  # Restric the y limit. 
+  # Restrict the y limit. 
   if (!is.na(ylim))  p <- p + ylim(0, ylim)
   
   if (!is.na(groupvar_stack)) {
-    p <- p + scale_fill_jama() +
+    p <- p + 
+      geom_col_pattern(aes(pattern = !!sym(legend_cap), pattern_angle = !!sym(legend_cap), pattern_spacing = !!sym(legend_cap)), 
+                        fill            = 'white',
+                        colour          = 'black', 
+                        pattern_density = 0.1, 
+                        pattern_fill    = 'black',
+                        pattern_colour  = 'black') +
       theme_classic() + 
       coord_flip() + 
       labs(title = title, y = "", x = "") +
-      guides(fill = guide_legend(legend_cap))  +
       theme(legend.position = "right")
   } else {
     p <- p + scale_fill_manual(values = color_grid) +
@@ -184,9 +192,11 @@ plot_all_top_pheno <- function(traditional_supervised,
                        groupvar_stack = "Pheno_cluster_category")
   
   p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
-  legend <- get_legend(p5)                    
+  legend <- get_legend(p5)          
+
   
-  plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l")
+  plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l",
+            labels = c('(a)', '(b)', '(c)', '(d)', '(e)', ''))
 }
 
 
@@ -264,53 +274,85 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
     
     # Arrange by sensitivity. 
     df_sens <- ml_rule_metrics(df, "Sensitivity") %>% 
-      select(Phenotype, diff, ML_better) %>% unique() %>% arrange(ML_better, -abs(diff))
+      select(Phenotype, diff, ML_better) %>% unique() %>% arrange(ML_better, -diff)
     
     df$Phenotype <- factor(df$Phenotype, levels = df_sens$Phenotype)
-    ML_better <- df_sens %>% filter(ML_better == TRUE) %>% select(Phenotype) %>% pull()
-    rule_better <- df_sens %>% filter(ML_better == FALSE) %>% select(Phenotype) %>% pull()
+    ML_better <- c("Clinical trial eligibility for n2c2 2018 challenge",
+                   "COVID-19", 
+                   "Stroke")
+    rule_better <- c("Obesity and multiple comorbidities", 
+                     "Marital status")
+    comparable <- c("Hepatorenal syndrome", "Alcohol abuse", 
+                    "Metastatic prostate cancer",
+                    "Acute respiratory distress syndrome",
+                    "Rhabdomyolysis")
+    
     df_ML_better <- df %>% filter(Phenotype %in% ML_better)
     df_rule_better <- df %>% filter(Phenotype %in% rule_better)
+    df_comparable <- df %>% filter(Phenotype %in% comparable)
     
-    g1 <- plot_rule_compare(df_ML_better, large_fig = large_fig) 
+    g1 <- plot_rule_compare(df_ML_better, large_fig = large_fig)
+    g3 <- plot_rule_compare(df_comparable, large_fig = large_fig, legend = TRUE)
     g2 <- plot_rule_compare(df_rule_better, large_fig = large_fig) 
     
-    plot_grid(g1, g2, nrow = 2, align = "v", labels = c('(a)', '(b)'))
+    plot_grid(g1, g2, g3, nrow = 3, align = "v", labels = c('(a)', '(b)', '(c)'),
+              rel_heights = c(3, 2, 5))
 
   } else if (comparator == "deep") {
    
     df <- df %>% filter(Compare_with_traditional_ML != "")
+    df <- df %>% filter("Best_performing_AUROC" != "" & 
+                        "Best_performing_PPV" != "" &
+                        "Best_performing_Sensitivity" != "" &
+                        "Best_performing_Specificity" != "")
     df <- unnest_validate_string(df) 
+    df <- df[-which(rowMeans(is.na(df)) >= 0.75), ]
     
     # Replace the long phenotype description. 
     df$Phenotype[df$PMID == 34514351] <- "Social determinants of health"
     df$Phenotype[df$PMID == 35007754] <- "Social determinants of health"
     df$Phenotype[df$PMID == 34791302] <- "Aspects of frailty"
+    df$Phenotype[df$PMID == 32548622] <- "Acute care conditions"
     
     df$Data_source[df$PMID == 34791302] <- "Penn Medicine; MIMIC-III database"
     df$Data_source[df$PMID == 34514351] <- "University of North Carolina Health System"
     df$Data_source[df$PMID == 32970677] <- "Optum Analytic"
     
     df <- df %>% 
-      unite("Study1", c(Phenotype, Data_source, PMID), sep = "\n", remove = FALSE) %>% 
+      unite("Study1", c(Phenotype, PMID), sep = "\n", remove = FALSE) %>% 
       unite("Study2", c(Phenotype, Data_source), sep = "\n", remove = FALSE)
     
     # Arrange by sensitivity. 
     df_sens <- ml_deep_metrics(df, "Sensitivity") %>% 
-      select(Study1, diff, DL_better) %>% unique() %>% arrange(DL_better, -abs(diff))
+      select(Study1, diff, DL_better) %>% unique() %>% arrange(DL_better, -diff)
     
     df$Study1 <- factor(df$Study1, levels = df_sens$Study1)
-    DL_better <- df_sens %>% filter(DL_better == TRUE) %>% select(Study1) %>% pull()
-    DL_better <- c(DL_better, df$Study1[df$PMID == 32970677])
-    df_DL_better <- df %>% filter(Study1 %in% DL_better)
-    df_ML_better <- df %>% filter(!(Study1 %in% DL_better))
+    
+    ML_better <- c("Aspects of frailty\n34791302")
+    
+    DL_comparable <- c("Bleeding\n33936461",
+                       "Diabetic retinopathy\n34423259",
+                       "Social determinants of health\n35007754",
+                       "COVID-19\n32449766",
+                       "Chest injury\n33709067",
+                       "Alcohol abuse\n29447188",
+                       "Adverse drug event\n31197355",
+                       "Chronic pain\n29447188",
+                       "Metastatic cancer\n29447188")
+    
+    df_comparable <- df %>% filter(Study1 %in% DL_comparable)
+    df_ML_better <- df %>% filter(Study1 %in% ML_better)
+    df_DL_better <- df %>% filter(!(Study1 %in% c(DL_comparable, ML_better)))
     
     g1 <- plot_deep_compare(df_DL_better, large_fig = large_fig) 
     g2 <- plot_deep_compare(df_ML_better, large_fig = large_fig) 
+    g3 <- plot_deep_compare(df_comparable, large_fig = large_fig, legend = TRUE)
     
-    plot_grid(g1, g2, nrow = 2, align = "v", labels = c('(a)', '(b)'), rel_heights = c(1, 0.4))
+    plot_grid(g1, g2, g3, nrow = 3, align = "v", labels = c('(a)', '(b)', '(c)'),
+              rel_heights = c(15, 4, 8))
   
   } else if (comparator == "weakly") {
+    
     
     df <- df %>% filter(Compare_with_rule_based != "")
     df <- unnest_validate_string(df, comapartor = "weakly") 
@@ -368,7 +410,7 @@ plot_weakly_supervised_compare <- function(df, comparison = "rule", study = "Phe
 }
 
 # Figure to plot ML vs rule across all metrics. 
-plot_rule_compare <- function(df, comparison = "rule", study = "Phenotype", large_fig = FALSE) {
+plot_rule_compare <- function(df, comparison = "rule", study = "Phenotype", large_fig = FALSE, legend = FALSE) {
 
   p1 <- plot_metrics(df, comparison, study, metric = "Sensitivity", large_fig) 
   
@@ -376,8 +418,13 @@ plot_rule_compare <- function(df, comparison = "rule", study = "Phenotype", larg
     theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank())
   
   p3 <- plot_metrics(df, comparison, study, metric = "PPV", large_fig)  +
-    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
-    theme(legend.position = "bottom")
+    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank())
+  
+  if (legend == TRUE) {
+    p3 <- p3 + theme(legend.position = "bottom")
+  } else {
+    p3 <- p3 + theme(legend.position = "none")
+  }
   
   p4 <- plot_metrics(df, comparison, study, metric = "NPV", large_fig)  +
     theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank())
@@ -389,12 +436,20 @@ plot_rule_compare <- function(df, comparison = "rule", study = "Phenotype", larg
 }
 
 # Figure to plot ML vs DL across all metrics.  
-plot_deep_compare <- function(df, comparison = "deep", study = "Study1", large_fig = FALSE) {
+plot_deep_compare <- function(df, comparison = "deep", study = "Study1", large_fig = FALSE, 
+                              legend = FALSE) {
   p1 <- plot_metrics(df, comparison, study, "Sensitivity", large_fig = large_fig)
   
   p2 <- plot_metrics(df, comparison, study, "Specificity", large_fig = large_fig) + 
-    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
-    theme(legend.position = "bottom")
+    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  
+  if (legend == TRUE) {
+    p2 <- p2 + 
+      theme(legend.position = "bottom")
+  } else {
+    p2 <- p2 + 
+      theme(legend.position = "none")
+  }
   
   p4 <- plot_metrics(df, comparison, study, "PPV", large_fig = large_fig) + 
     theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
@@ -409,7 +464,13 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
   
   # Remove all the metrics are NAs. 
   df1 <- apply(df[, c(which(colnames(df) == "Best_performing_Sensitivity")):ncol(df)], 2, as.numeric)
+  
+  if (comparison == "deep" & typeof(df1) == "double") {
+    df1 <- t(data.frame(df1))
+  }
+  
   missing_index <- rowMeans(is.na(df1))
+  
   if (sum(missing_index == 1) > 0) {
     df <- df[-which(missing_index == 1), ]
   }
@@ -417,10 +478,8 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
   if (comparison == "rule") {
     df <- ml_rule_metrics(df, metric)
   } else if (comparison == "weakly") {
-
     df <- weakly_rule_metrics(df, metric)
   } else {
-    
     df <- ml_deep_metrics(df, metric) 
   }
   
@@ -435,7 +494,7 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
       scale_x_discrete(labels = function(x) str_extract(x, ".+\\n"))
   }
   
-  p <- p + scale_y_continuous(limits = c(0,1), labels = function(y) label_parsed(paste0(y*100))) +
+  p <- p + scale_y_continuous(limits = c(0.01, 1), labels = function(y) label_parsed(paste0(y*100))) +
     scale_color_jama() + 
     coord_flip() + 
     labs(x = "", y = "", title = metric) +
@@ -540,8 +599,7 @@ print_tables <- function(df,
     df <- df %>%
       group_by(!!sym(group_var), !!sym(groupvar_stack)) %>%
       summarise(Count = n()) %>%
-      slice_max(order_by = Count, n = top_count) %>%
-      arrange(-Count)
+      slice_max(order_by = Count, n = top_count) 
     
     if (restric_count) df <- df %>% filter(Count > 1)
     
@@ -549,15 +607,16 @@ print_tables <- function(df,
     df1 <- df %>%
       group_by(!!sym(group_var)) %>%
       summarise(Count = n()) %>%
-      slice_max(order_by = Count, n = top_count) %>% 
-      filter(Count > 1)
+      slice_max(order_by = Count, n = top_count) 
+    
+    if (restric_count) df1 <- df1 %>% filter(Count > 1)
     
     df <- df %>%
       group_by(!!sym(group_var), !!sym(groupvar_stack), !!sym(groupvar_stack2)) %>%
       summarise(Count = n()) %>%
       pivot_wider(names_from = c("ML_type", "Traditional"), values_from = "Count", names_sep = " ", values_fill = 0) %>%
       inner_join(df1) %>%
-      arrange(-Count) 
+      arrange(-Count)
     
     # %>%
     #   janitor::adorn_totals("row")
@@ -758,6 +817,7 @@ unnest_validate_string <- function(df, comapartor = "deep") {
   }
   
   res <- res[!is.na(res$Best_performing_model),]
+  #res <- res[!is.na(res$Data_source), ]
   return(res)
 }
 

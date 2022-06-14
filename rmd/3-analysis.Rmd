@@ -26,6 +26,7 @@ library(ggsci)
 library(grid)
 library(gridExtra)
 library(ggvenn)
+library(ggpattern)
 library(cowplot)
 
 # Functions for analysis
@@ -46,8 +47,10 @@ df$Structured <- (df$Structured_data_type != "")
 # Create variable indicating types of data
 df$Data_type[df$Structured == 1] <- "Structured"
 df$Data_type[df$Unstructured == 1] <- "Free-text"
-df$Data_type[df$Unstructured_data_language == "Non-language"] <- "Image"
 df$Data_type[df$Unstructured + df$Structured == 2] <- "Both structured and free-text"
+# As the paper used non-language unstructured data and structured data,
+# we include it as structured data. 
+df$Data_type[df$Unstructured_data_language == "Non-language"] <- "Structured"
 
 # Create variable indicating use of traditional ML method
 df$Traditional[df$DL == ''] <- "Traditional machine learning"
@@ -61,8 +64,7 @@ df$Traditional[df$DL != ''] <- "Deep learning"
 df$ML_type <- factor(df$ML_type, levels = c("Supervised", 
                                              "Semi-supervised", 
                                              "Weakly-supervised", 
-                                             "Unsupervised",
-                                            "Reinforcement"))
+                                             "Unsupervised"))
 stacked_bar(df, "ML_type", "Traditional", order_by_count = FALSE)
 ```
 
@@ -160,24 +162,7 @@ horizontal_bar(temporal_unnested, "Phenotype_unnested",
                legend_cap = "Temporal phenotype category")
 ```
 
-```{r, fig.height=8}
-sdoh_unnested <- unnest_two_string(df %>% filter(Pheno_SDOH >= 1), 
-                                   c("Phenotype", "Pheno_SDOH_category"), utility = "sdoh")
-p1 <- horizontal_bar(sdoh_unnested, "Phenotype", 
-               "Pheno_SDOH_category", 
-               restrict_count = FALSE, 
-               ylim = 8, 
-               legend_cap = "SDOH category")
 
-temporal_unnested <- unnest_string_var(df %>% filter(Pheno_temporal >= 1), "Phenotype")
-p2 <- horizontal_bar(temporal_unnested, "Phenotype_unnested", 
-               "Pheno_temporal_category",
-               restrict_count = FALSE, 
-               ylim = 2, 
-               legend_cap = "Temporal phenotype category")
-
-plot_grid(p1, p2, ncol = 1, align = "v", axis = "l")
-```
 
 \clearpage
 # Data source
@@ -261,9 +246,6 @@ stacked_bar(method_unnested %>% filter(Competition_data_name != ""),
 method_unnested <- unnest_string_var(df, "Data_source")
 open_data <- c("MIMIC-III database", "MTSamples database")
 method_unnested <- method_unnested %>% filter(Data_source_unnested %in% open_data)
-
-print_tables(method_unnested, "Data_source_unnested", restric_count = FALSE, top_count = 10)
-print_multiple_items(method_unnested, "Openly data")
 
 print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", top_count = 10, restric_count = FALSE)
 ```

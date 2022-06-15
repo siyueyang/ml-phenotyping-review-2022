@@ -353,7 +353,6 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
   
   } else if (comparator == "weakly") {
     
-    
     df <- df %>% filter(Compare_with_rule_based != "")
     df <- unnest_validate_string(df, comapartor = "weakly") 
     
@@ -373,8 +372,27 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
       dplyr::select(Phenotype, rule, diff, ML_better) %>% unique() %>% arrange(-abs(diff))
 
     df$Phenotype <- factor(df$Phenotype, levels = df_sens$Phenotype)
-    g1 <- plot_rule_compare(df, comparison = "rule", study = "Phenotype", large_fig = large_fig) 
-    plot_grid(g1, nrow = 1)
+    
+    comparable <- c("Metastatic breast cancer",
+                    "Rheumatoid arthritis\n (PheProb)",
+                    "Obesity\n (APHRODITE)",
+                    "Fall\n (NimbleMiner)",
+                    "Glaucoma\n (APHRODITE)",
+                    "Epilepsy\n (APHRODITE)",
+                    "Type 2 diabetes mellitus\n (APHRODITE)",
+                    "Cataracts\n (APHRODITE)",
+                    "Venous thromboembolism\n (APHRODITE)",
+                    "Heart failure\n (APHRODITE)",
+                    "Peripheral arterial disease\n (APHRODITE)")
+    
+    df_ML_better <- df %>% filter(!(Phenotype %in% comparable))
+    df_comparable <- df %>% filter(Phenotype %in% comparable)
+    
+    g1 <- plot_rule_compare(df_ML_better, comparison = "weakly", large_fig = large_fig)
+    g3 <- plot_rule_compare(df_comparable, comparison = "weakly", large_fig = large_fig, legend = TRUE)
+    
+    plot_grid(g1, g3, nrow = 2, align = "v", labels = c('(a)', '(b)'),
+              rel_heights = c(5, 5))
   
   } else {
     #weakly v.s. traditional
@@ -382,14 +400,21 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
     df <- unnest_validate_string(df, comapartor = "weakly") 
     
     df$Phenotype[df$PMID == 29126253] <- paste0(df$Phenotype[df$PMID == 29126253], "\n (PheNorm)")
-    #df$Phenotype[df$PMID == 33746080] <- paste0(df$Phenotype[df$PMID == 32374408], "\n (PheVis)")
+    df$Phenotype[df$PMID == 33746080] <- paste0(df$Phenotype[df$PMID == 33746080], "\n (PheVis)")
     df$Phenotype[df$PMID == 32548637] <- paste0(df$Phenotype[df$PMID == 32548637], "\n (sureLDA)")
    
     df <- df %>% 
       unite("Study1", c(Phenotype, Data_source, PMID), sep = "\n", remove = FALSE) %>% 
-      unite("Study2", c(Phenotype, Data_source), sep = "\n", remove = FALSE)
+      unite("Study2", c(Phenotype, Data_source), sep = "\n", remove = FALSE) %>%
+      filter(Best_performing_AUROC != "")
   
-    g1 <- plot_weakly_supervised_compare(df, comparison = "weakly", study = "Phenotype", large_fig = large_fig) 
+    # Arrange by sensitivity. 
+    df_auc <- weakly_rule_metrics(df, "AUROC") %>% 
+      dplyr::select(Phenotype, diff) %>% unique() %>% arrange(-(diff)) 
+    
+    df$Phenotype <- factor(df$Phenotype, levels = df_auc$Phenotype)
+    
+    g1 <- plot_weakly_supervised_compare(df, comparison = "weakly deep", study = "Phenotype", large_fig = large_fig) 
     plot_grid(g1, nrow = 1)
   }
 }
@@ -478,9 +503,11 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
   if (comparison == "rule") {
     df <- ml_rule_metrics(df, metric)
   } else if (comparison == "weakly") {
-    df <- weakly_rule_metrics(df, metric)
-  } else {
+    df <- weakly_metrics(df, metric)
+  } else if (comparison == "deep") {
     df <- ml_deep_metrics(df, metric) 
+  } else {
+    df <- weakly_rule_metrics(df, metric)
   }
   
   if (study == "Phenotype") {
@@ -523,14 +550,36 @@ ml_rule_metrics <- function(df, metric = "Sensitivity") {
   
   df %>%
     filter(Best_performing_model != "") %>%
-    mutate(`Machine learning` = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
+    mutate(`Traditional supervised learning` = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
                           TRUE ~ as.numeric(!!sym(metric_ml)))) %>%
-    mutate(`Rule-based` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
+    mutate(`Rule-based algorithms` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
                             TRUE ~ as.numeric(!!sym(metric_rule)))) %>%
-    mutate(diff = `Machine learning` - `Rule-based`) %>%
+    mutate(diff = `Traditional supervised learning` - `Rule-based algorithms`) %>%
     mutate(ML_better = diff > 0) %>%
-    mutate(rule = `Rule-based`) %>%
-    pivot_longer(cols = c(`Machine learning`, `Rule-based`),
+    mutate(rule = `Rule-based algorithms`) %>%
+    pivot_longer(cols = c(`Traditional supervised learning`, `Rule-based algorithms`),
+                 names_to = "Method", values_to = metric) %>%
+    dplyr::select(Study1, Study2, PMID, Phenotype, rule, diff, ML_better, !!sym(metric), Method) %>%
+    mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) 
+}
+
+# Utility function to plot supervised ML vs rule for one metric. 
+weakly_metrics <- function(df, metric = "Sensitivity") {
+  
+  metric_best <- paste0("Best_performing_", metric)
+  metric_ml <- paste0("Best_comparator_traditional_", metric)
+  metric_rule <- paste0("Best_comparator_Rule_", metric)
+  
+  df %>%
+    filter(Best_performing_model != "") %>%
+    mutate(`Weakly-supervised learning` = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
+                                                         TRUE ~ as.numeric(!!sym(metric_ml)))) %>%
+    mutate(`Rule-based algorithms` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
+                                               TRUE ~ as.numeric(!!sym(metric_rule)))) %>%
+    mutate(diff = `Weakly-supervised learning` - `Rule-based algorithms`) %>%
+    mutate(ML_better = diff > 0) %>%
+    mutate(rule = `Rule-based algorithms`) %>%
+    pivot_longer(cols = c(`Weakly-supervised learning`, `Rule-based algorithms`),
                  names_to = "Method", values_to = metric) %>%
     dplyr::select(Study1, Study2, PMID, Phenotype, rule, diff, ML_better, !!sym(metric), Method) %>%
     mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) 
@@ -543,11 +592,11 @@ weakly_rule_metrics <- function(df, metric = "Sensitivity") {
   metric_ml <- paste0("Best_comparator_traditional_", metric)
   
   df %>%
-    mutate(`Weakly-supervised` = as.numeric(!!sym(metric_best))) %>%
-    mutate(`Traditional supervised` = as.numeric(!!sym(metric_ml))) %>%
-    mutate(diff = `Weakly-supervised` - `Traditional supervised`) %>%
+    mutate(`Weakly-supervised learning` = as.numeric(!!sym(metric_best))) %>%
+    mutate(`Traditional supervised learning` = as.numeric(!!sym(metric_ml))) %>%
+    mutate(diff = `Weakly-supervised learning` - `Traditional supervised learning`) %>%
     mutate(ML_better = diff > 0) %>%
-    pivot_longer(cols = c(`Weakly-supervised`, `Traditional supervised`),
+    pivot_longer(cols = c(`Weakly-supervised learning`, `Traditional supervised learning`),
                  names_to = "Method", values_to = metric) %>%
     dplyr::select(Phenotype, diff, ML_better, !!sym(metric), Method) %>%
     mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) 

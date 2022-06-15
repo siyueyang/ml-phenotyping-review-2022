@@ -1,7 +1,7 @@
 ---
 title: "Exclude articles not relevant to EHR-based automated phenotyping"
 author: "Siyue Yang, Jessica Gronsbell"
-date: "05/18/2022"
+date: "06/15/2022"
 output: pdf_document
 knit: (function(inputFile, encoding) {
       out_dir <- "../report";
@@ -22,9 +22,11 @@ library(kableExtra)
 
 ```{r}
 df <- read.csv("../data/annotations050822.csv", skip = 1)
+
+df <- df %>% filter(PMID != "")
 ```
 
-After merged articles of PubMed and Web of Sciences by `1-merging.rmd`, there are 852 papers.  
+After merged articles of PubMed and Web of Sciences by `1-merging.rmd`, there are 850 papers.  
 
 ```{r}
 init <- df %>% 

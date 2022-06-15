@@ -317,7 +317,7 @@ plot_validate_metrics(weakly_supervised, comparator = "weakly vs supervised", la
 ```{r}
 method_unnested <- unnest_string_var(df, "Model_performance_metrics")
 print_tables(method_unnested, "Model_performance_metrics_unnested", "ML_type", "Traditional", 
-             top_count = 20, restric_count = FALSE, col_width = 4.6)
+             top_count = 20, restric_count = TRUE, col_width = 4.6)
 ```
 
 

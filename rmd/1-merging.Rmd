@@ -1,7 +1,7 @@
 ---
 title: "Merge search results from Pubmed and Web of Science"
 author: "Siyue Yang, Jessica Gronsbell"
-date: "04/15/2022"
+date: "06/15/2022"
 output: pdf_document
 knit: (function(inputFile, encoding) {
       out_dir <- "../report";
@@ -54,7 +54,7 @@ We followed the procedure below to identify duplicates and merge the search resu
 
 2. We extracted 651 articles from Web of Science, and removed 4 duplication (grouping by PMID), resulting a total of 647 Web of Science articles.  We also corrected the journal name error for 1 article. 
 
-3. We merged the datasets of 717 PubMed articles and 647 Web of science articles, from which we identified 512 duplicates. Within the duplicated articles, We also identified 2 papers with their correction, and we removed the corrected version. 
+3. We merged the datasets of 717 PubMed articles and 647 Web of science articles, from which we identified 516 duplicates. Within the duplicated articles, We also identified 2 papers with their correction, and we removed the corrected version. 
 
 4. There are total 850 articles passed the filters. 
 
@@ -262,7 +262,7 @@ merged_dat <- merged_dat %>%
   ))
 ```
 
--  Duplicates check. We merged the data set by PMID in the previous step. There are 512 duplicates. Within the duplicates, we found two papers with their correction, see below. We removed papers with PMID 32817711 and 35311903. 
+-  Duplicates check. We merged the data set by PMID in the previous step. There are 516 duplicates. Within the duplicates, we found two papers with their correction, see below. We removed papers with PMID 32817711 and 35311903. 
 
 -  Unify the name of publications. 
 
@@ -286,7 +286,7 @@ merged_dat <- merged_dat %>%
 
 ## 4. Results after merging
 
-After removing 28 AMIA articles, 512 duplicated articles, as well as 2 corrected article, the number of articles from each source, i.e. PubMed, Web of Science, or both are summarized in the table below.
+After removing 28 AMIA articles, 516 duplicated articles, as well as 2 corrected article, the number of articles from each source, i.e. PubMed, Web of Science, or both are summarized in the table below.
 
 ```{r}
 final_dat <- merged_dat

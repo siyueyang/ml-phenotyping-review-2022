@@ -775,15 +775,15 @@ print_summary_table <- function(df) {
     freetext <- nrow(dataframe %>% filter(Unstructured == TRUE & Unstructured_data_language != "Non-language" ))
     nlp <- nrow(dataframe %>% filter(Unstructured == TRUE & NLP_software != ""))
     comp_data <- nrow(dataframe %>% filter(Competition_data_name != ''))
-    multisite <- nrow(dataframe %>% filter(Multi_sites_data == 1))
-    open_data <-  nrow(dataframe %>% filter(Openly_available_data == 1))
+    private_multisite <- nrow(dataframe %>% filter(Multi_sites_data == 1 & Openly_available_data == 0))
+    open_data <-  nrow(dataframe %>% filter(Openly_available_data == 1 & Competition_data_name == ''))
     private_single <- nrow(dataframe %>% filter(Multi_sites_data == 0 & Openly_available_data == 0))
     compare_rule <- nrow(dataframe %>% filter(Compare_with_rule_based != ""))
     compare_ml <- nrow(dataframe %>% filter(Compare_with_traditional_ML != ""))
     demographics <- nrow(dataframe %>% filter(Reported_demographics == 1))
     open_code <- nrow(dataframe %>% filter(Open_code == 1))
     
-    tmp <- c(total, freetext, nlp, comp_data, multisite, 
+    tmp <- c(total, freetext, nlp, comp_data, private_multisite, 
              open_data, private_single, compare_rule, 
              compare_ml, demographics, open_code)
     res <- rbind(res, tmp)

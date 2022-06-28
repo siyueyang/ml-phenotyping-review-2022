@@ -192,6 +192,10 @@ ggsave(g2, file="../figure/fig4.eps", width=40, height=20, units="cm", dpi=600)
 ```
 
 ```{r}
+# Get data source counts for paper
+
+```
+```{r}
 print_summary_table(list(traditional_supervised, deep_supervised, semi_supervised,
                          weakly_supervised, un_supervised, df)) 
 ```

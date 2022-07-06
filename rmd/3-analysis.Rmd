@@ -79,7 +79,7 @@ ggsave(g1, file="../figure/fig2.eps", width=40, height=20, units="cm", dpi=600)
 ```{r}
 # Traditional ML method.
 method_unnested <- unnest_string_var(df, "Traditional_ML_method")
-print_tables(method_unnested, "ML_type", "Traditional_ML_method_unnested", top_count = 10,
+print_tables(method_unnested, "ML_type", "Traditional_ML_method_unnested", top_count = 20, restric_count = TRUE,
              title = "Common traditional machine learning methods (Count > 1)")
 print_multiple_items(method_unnested, "traditional machine learning methods")
 ```
@@ -127,9 +127,24 @@ p4 <- horizontal_bar(method_unnested, "FFNN_subname_unnested", title = "FFNN", y
 plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2, align = "v", axis = "l")
 ```
 
-
 \clearpage 
 # Phenotype
+
+```{r}
+# Unique phenotypes
+pheno_unnested <- unnest_string_var(df %>% filter(Competition_data_name == ""), "Phenotype")
+length(unique(pheno_unnested$Phenotype_unnested))
+
+# more than 1 phenotype
+sum(df$Total_number_of_phenos > 1, na.rm = TRUE)
+
+# binary phenotype
+sum(df$Pheno_binary > 0, na.rm = TRUE)
+
+sum(df$Pheno_severity > 0, na.rm = TRUE)
+
+sum(df$Pheno_temporal > 0, na.rm = TRUE)
+```
 
 ```{r, fig.height = 8}
 # Phenotype - non-competition
@@ -211,22 +226,41 @@ print_tables(data_unnested, "Data_type", top_count = 10, title = "Types of data 
 
 ```{r, fig.height=8}
 data_unnested <- unnest_string_var(df %>% filter(Structured == 1), "Structured_data_type")
+
+
+data_unnested <- data_unnested %>%
+  mutate(Structured_data_type_unnested = case_when(Structured_data_type_unnested == "Diagnosis" ~ "Diagnoses", TRUE ~ Structured_data_type_unnested)) 
+
 p1 <- horizontal_bar(data_unnested, "Structured_data_type_unnested", 
                      string_wrap = 20,restrict_count = TRUE, 
-                     title = "Structured data type (Count > 1)", ylim = 60, label_text = TRUE)
+                     title = "Structured data type", ylim = 60, label_text = TRUE,
+                     xlab = "Number of articles")
 
 print_multiple_items(data_unnested, "structured data type")
 
 data_unnested <- unnest_string_var(df %>% filter(Unstructured == 1), "Unstructured_data_type")
+
+data_unnested <- data_unnested %>%
+  mutate(Unstructured_data_type_unnested = case_when(Unstructured_data_type_unnested == "Clinical notes" ~ "Unspecified", TRUE ~ Unstructured_data_type_unnested))
 p2 <- horizontal_bar(data_unnested, "Unstructured_data_type_unnested", 
                      string_wrap = 20, restrict_count = TRUE, 
-                     title = "Free text type (Count > 1)", ylim = 60, label_text = TRUE)
+                     title = "Clinical note type", ylim = 60, label_text = TRUE,
+                     xlab = "Number of articles")
 print_multiple_items(data_unnested, "unstructured data type")
 
-plot_grid(p1, p2, ncol = 1, align = "v", axis = "l")
+plot_grid(p1, p2, ncol = 1, align = "v", axis = "l") 
 ```
 
 \clearpage
+
+## Institutions
+
+```{r}
+count_unnested <- unnest_string_var(df, "Country")
+print_tables(count_unnested, "Country_unnested", 
+             top_count = 10, restric_count = FALSE, hold_pos = TRUE)
+```
+
 
 
 ## Openly-available data
@@ -247,7 +281,12 @@ stacked_bar(method_unnested %>% filter(Competition_data_name != ""),
 
 
 ```{r}
-method_unnested <- unnest_string_var(df, "Data_source")
+df %>% filter(Competition_data_name != "") %>% nrow()
+```
+
+
+```{r}
+method_unnested <- unnest_string_var(df %>% filter(Competition_data_name == ""), "Data_source")
 open_data <- c("MIMIC-III database", "MTSamples database")
 method_unnested <- method_unnested %>% filter(Data_source_unnested %in% open_data)
 
@@ -255,12 +294,30 @@ print_tables(method_unnested, "Data_source_unnested", "ML_type", "Traditional", 
 ```
 
 \clearpage
+# Terminology
+
+```{r}
+term_unnested <- unnest_string_var(df, "Terminology")
+
+term_unnested <- term_unnested %>% 
+  mutate(Terminology_unnested = case_when(Terminology_unnested == "ICD-9/10" ~ "ICD-9; ICD-10",
+                                          TRUE ~ Terminology_unnested))
+
+term_unnested <- unnest_string_var(term_unnested, "Terminology_unnested")
+
+print_multiple_items(term_unnested, "terminologies")
+print_tables(term_unnested, "Terminology_unnested_unnested", "ML_type", "Traditional", top_count = 20, restric_count = TRUE)
+```
+
+
+
+\clearpage
 # NLP software
 
 ```{r}
 method_unnested <- unnest_string_var(df, "NLP_software")
 print_multiple_items(method_unnested, "NLP software")
-print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10)
+print_tables(method_unnested, "NLP_software_unnested", "ML_type", "Traditional", top_count = 10, restric_count = TRUE)
 ```
 
 # Emebddings
@@ -318,10 +375,24 @@ plot_validate_metrics(weakly_supervised, comparator = "weakly vs supervised", la
 
 # Model performance metric reporting
 
+
 ```{r}
-method_unnested <- unnest_string_var(df, "Model_performance_metrics")
+method_unnested <- unnest_string_var(df %>% filter(ML_type != "Unsupervised"), "Model_performance_metrics")
 print_tables(method_unnested, "Model_performance_metrics_unnested", "ML_type", "Traditional", 
              top_count = 20, restric_count = TRUE, col_width = 4.6)
 ```
 
+```{r, eval= FALSE}
+# Report at least one of the precision, recall, F-score
+method_unnested %>%
+  filter(Model_performance_metrics_unnested %in% c("Precision", "Recall", "F-score")) %>%
+  group_by(PMID) %>%
+  summarise(n = n()) %>%
+  nrow()
 
+# Report at least one of the precision, recall, F-score
+method_unnested %>%
+  filter(Model_performance_metrics_unnested %in% c("Brier score", "Calibration plots")) %>%
+  group_by(PMID) %>%
+  summarise(n = n()) 
+```

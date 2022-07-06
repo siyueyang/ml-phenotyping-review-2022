@@ -17,22 +17,24 @@ stacked_bar <- function(df,
     df[, group_var] <- str_wrap(pull(df[, group_var]), width = string_wrap)
   }
   
-  temp_df <- df %>% group_by(!!sym(group_var), !!sym(groupvar_stack)) %>% summarise(Count = n()) 
+  temp_df <- df %>% group_by(!!sym(group_var), !!sym(groupvar_stack)) %>% summarise(Count = n()) %>%
+    mutate(plot_n = Count + 3)
   
   if (order_by_count) {
-    p <- ggplot(data = temp_df, aes(x = reorder(!!sym(group_var), -Count, sum), y = Count, fill = !!sym(groupvar_stack))) 
+    p <- ggplot(data = temp_df, aes(x = reorder(!!sym(group_var), -plot_n, sum), y = plot_n, fill = !!sym(groupvar_stack))) 
   
   } else {
-    p <- ggplot(data = temp_df, aes(x = !!sym(group_var), y = Count, fill = !!sym(groupvar_stack))) 
+    p <- ggplot(data = temp_df, aes(x = !!sym(group_var), y = plot_n, fill = !!sym(groupvar_stack))) 
   
   }
   
   p <- p + geom_bar(stat="identity", position = "stack") +
     scale_fill_jama() +
-    labs(x = "", y = "") +
+    labs(x = "") +
     theme_classic() +
-    theme(legend.position = "bottom") +
-    guides(fill = guide_legend("")) 
+    theme(legend.position = "bottom", axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+    guides(fill = guide_legend("")) +
+    ylab("Number of articles")
   
   if (large_fig) {
     p <- p +  
@@ -46,7 +48,8 @@ stacked_bar <- function(df,
       geom_text(aes(label = Count), size = 3, color = "white", position = position_stack(vjust = 0.5)) 
   }
   
-  p
+  p + theme(axis.text.y = element_text(colour = "black"),
+            axis.text.x = element_text(colour = "black"))
 }
 
 
@@ -59,6 +62,7 @@ horizontal_bar <- function(df,
                            ylim = NA, 
                            label_text = TRUE, 
                            title = NULL,
+                           xlab = NA,
                            string_wrap = NA,
                            color_grid = NA,
                            large_fig = FALSE,
@@ -121,7 +125,7 @@ horizontal_bar <- function(df,
       geom_col_pattern(aes(pattern = !!sym(legend_cap), pattern_angle = !!sym(legend_cap), pattern_spacing = !!sym(legend_cap)), 
                         fill            = 'white',
                         colour          = 'black', 
-                        pattern_density = 0.1, 
+                        pattern_density = 0.05, 
                         pattern_fill    = 'black',
                         pattern_colour  = 'black') +
       theme_classic() + 
@@ -143,11 +147,15 @@ horizontal_bar <- function(df,
             legend.title = element_text(size = 20), legend.text = element_text(size = 15)) 
   } else {
     p <- p + 
-      theme(plot.title = element_text(face = "bold", size = 8),
+      theme(plot.title = element_text(face = "bold", size = 12),
             axis.text = element_text(size = 7),
-            legend.title = element_text(size = 8), legend.text = element_text(size = 7)) 
+            legend.title = element_text(size = 12), legend.text = element_text(size = 7)) 
   }
-  p
+  
+  if (!is.na(xlab)) p <- p + ylab(xlab)
+  
+  p + theme(axis.text.y = element_text(colour = "black"),
+            axis.text.x = element_text(colour = "black")) 
 }
 
 # Figure to plot the whole top phenotype.
@@ -173,30 +181,39 @@ plot_all_top_pheno <- function(traditional_supervised,
   }
   
   names(color_grid) <- phenotype_common
+  
+  color_grid["Chronic obstructive\npulmonary disease"] <- "#000003"
+  color_grid["Non-alcoholic fatty liver\ndisease"] <- "#000003"
+  color_grid["Type 2 diabetes mellitus"] <- "#6fd5db"
+  
               
   p1 <- plot_top_pheno(traditional_supervised, label_text = FALSE,
-                       top_count = 5, title = "Traditional supervised learning", color_grid = color_grid) 
+                       top_count = 5, title = "Traditional supervised", color_grid = color_grid) 
   
   p2 <- plot_top_pheno(deep_supervised, label_text = FALSE,       
-                       top_count = 5, title = "Deep supervised learning", color_grid = color_grid) 
+                       top_count = 5, title = "Deep supervised", color_grid = color_grid) 
   
   p3 <- plot_top_pheno(semi_supervised, label_text = FALSE,        
-                       top_count = 5, title = "Semi-supervised learning", color_grid = color_grid) 
+                       top_count = 5, title = "Semi-supervised", color_grid = color_grid) 
   
   p4 <- plot_top_pheno(weakly_supervised, label_text = FALSE,     
-                       top_count = 5, title = "Weakly-supervised learning", color_grid = color_grid) 
+                       top_count = 5, title = "Weakly-supervised", color_grid = color_grid) 
+  
+  # p5 <- plot_top_pheno(un_supervised, label_text = FALSE,         
+  #                      top_count = 5, title = "Unsupervised learning", 
+  #                      string_wrap = 25, ylim = 5, restrict_count = TRUE, 
+  #                      groupvar_stack = "Pheno_cluster_category")
   
   p5 <- plot_top_pheno(un_supervised, label_text = FALSE,         
-                       top_count = 5, title = "Unsupervised learning", 
-                       string_wrap = 25, ylim = 5, restrict_count = TRUE, 
-                       groupvar_stack = "Pheno_cluster_category")
+                       top_count = 5, title = "Unsupervised", 
+                       color_grid = color_grid)
   
-  p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
-  legend <- get_legend(p5)          
+  # p5_unlegend <- p5 + theme(legend.position = "none", legend.title = element_blank())
+  # legend <- get_legend(p5)          
 
   
-  plot_grid(p1, p2, p3, p4, p5_unlegend, legend, ncol = 2, nrow = 3, align = "v", axis = "l",
-            labels = c('(a)', '(b)', '(c)', '(d)', '(e)', ''))
+  plot_grid(p1, p2, p3, p4, p5, ncol = 2, nrow = 3, align = "v", axis = "l",
+            labels = c('(a)', '(b)', '(c)', '(d)', '(e)'), label_size = 12)
 }
 
 
@@ -414,24 +431,10 @@ plot_validate_metrics <- function(df, comparator = "rule", large_fig = FALSE) {
     
     df$Phenotype <- factor(df$Phenotype, levels = df_auc$Phenotype)
     
-    g1 <- plot_weakly_supervised_compare(df, comparison = "weakly deep", study = "Phenotype", large_fig = large_fig) 
-    plot_grid(g1, nrow = 1)
+    plot_metrics(df, comparison = comparator, study = "Phenotype", metric = "AUROC", large_fig, xlim = 0.5) + 
+      theme(legend.position = "bottom")
+    
   }
-}
-
-# Figure to plot weakly-supervised ML vs rule across all metrics. 
-plot_weakly_supervised_compare <- function(df, comparison = "rule", study = "Phenotype", large_fig = FALSE) {
-  
-  p1 <- plot_metrics(df, comparison, study, metric = "Sensitivity", large_fig) 
-  
-  p2 <- plot_metrics(df, comparison, study, metric = "Specificity", large_fig)  +
-    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
-    theme(legend.position = "bottom")
-  
-  p5 <- plot_metrics(df, comparison, study, metric = "AUROC", large_fig)  +
-    theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank())
-  
-  egg::ggarrange(p1,p2,p5, nrow = 1, draw = FALSE)
 }
 
 # Figure to plot ML vs rule across all metrics. 
@@ -485,7 +488,7 @@ plot_deep_compare <- function(df, comparison = "deep", study = "Study1", large_f
   egg::ggarrange(p1,p2, p4,p5, nrow = 1, draw = FALSE)
 }
 
-plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = "Sensitivity", large_fig = FALSE) {
+plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = "Sensitivity", large_fig = FALSE, xlim = 0.01) {
   
   # Remove all the metrics are NAs. 
   df1 <- apply(df[, c(which(colnames(df) == "Best_performing_Sensitivity")):ncol(df)], 2, as.numeric)
@@ -521,12 +524,13 @@ plot_metrics <- function(df, comparison = "rule", study = "Phenotype", metric = 
       scale_x_discrete(labels = function(x) str_extract(x, ".+\\n"))
   }
   
-  p <- p + scale_y_continuous(limits = c(0.01, 1), labels = function(y) label_parsed(paste0(y*100))) +
+  p <- p + scale_y_continuous(limits = c(xlim, 1), labels = function(y) label_parsed(paste0(y*100))) +
     scale_color_jama() + 
     coord_flip() + 
     labs(x = "", y = "", title = metric) +
     theme_bw() + 
     theme(legend.position = "none", legend.title=element_blank()) 
+
   
   if (large_fig) {
     p + geom_point(size = 3) + 
@@ -968,3 +972,4 @@ unnest_two_string <- function(df, vars = c("Phenotype", "Best_performing_Sensiti
   
   return(res)
 }
+

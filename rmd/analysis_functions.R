@@ -556,12 +556,12 @@ ml_rule_metrics <- function(df, metric = "Sensitivity") {
     filter(Best_performing_model != "") %>%
     mutate(`Traditional supervised learning` = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
                           TRUE ~ as.numeric(!!sym(metric_ml)))) %>%
-    mutate(`Rule-based algorithms` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
+    mutate(`Rule-based` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
                             TRUE ~ as.numeric(!!sym(metric_rule)))) %>%
-    mutate(diff = `Traditional supervised learning` - `Rule-based algorithms`) %>%
+    mutate(diff = `Traditional supervised learning` - `Rule-based`) %>%
     mutate(ML_better = diff > 0) %>%
-    mutate(rule = `Rule-based algorithms`) %>%
-    pivot_longer(cols = c(`Traditional supervised learning`, `Rule-based algorithms`),
+    mutate(rule = `Rule-based`) %>%
+    pivot_longer(cols = c(`Traditional supervised learning`, `Rule-based`),
                  names_to = "Method", values_to = metric) %>%
     dplyr::select(Study1, Study2, PMID, Phenotype, rule, diff, ML_better, !!sym(metric), Method) %>%
     mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) 
@@ -578,12 +578,12 @@ weakly_metrics <- function(df, metric = "Sensitivity") {
     filter(Best_performing_model != "") %>%
     mutate(`Weakly-supervised learning` = case_when(str_detect(Best_performing_model, "Traditional ML") ~ as.numeric(!!sym(metric_best)),
                                                          TRUE ~ as.numeric(!!sym(metric_ml)))) %>%
-    mutate(`Rule-based algorithms` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
+    mutate(`Rule-based` = case_when(str_detect(Best_performing_model, "Rule-based") ~ as.numeric(!!sym(metric_best)),
                                                TRUE ~ as.numeric(!!sym(metric_rule)))) %>%
-    mutate(diff = `Weakly-supervised learning` - `Rule-based algorithms`) %>%
+    mutate(diff = `Weakly-supervised learning` - `Rule-based`) %>%
     mutate(ML_better = diff > 0) %>%
-    mutate(rule = `Rule-based algorithms`) %>%
-    pivot_longer(cols = c(`Weakly-supervised learning`, `Rule-based algorithms`),
+    mutate(rule = `Rule-based`) %>%
+    pivot_longer(cols = c(`Weakly-supervised learning`, `Rule-based`),
                  names_to = "Method", values_to = metric) %>%
     dplyr::select(Study1, Study2, PMID, Phenotype, rule, diff, ML_better, !!sym(metric), Method) %>%
     mutate_if(~ all(. %in% c(0, NA)), ~ replace(., is.na(.), 0)) 
@@ -784,7 +784,7 @@ print_summary_table <- function(df) {
     private_single <- nrow(dataframe %>% filter(Multi_sites_data == 0 & Openly_available_data == 0))
     compare_rule <- nrow(dataframe %>% filter(Compare_with_rule_based != ""))
     compare_ml <- nrow(dataframe %>% filter(Compare_with_traditional_ML != ""))
-    demographics <- nrow(dataframe %>% filter(Reported_demographics == 1))
+    demographics <- nrow(dataframe %>% filter(Reported_demographics == 1 & Openly_available_data == 0))
     open_code <- nrow(dataframe %>% filter(Open_code == 1))
     
     tmp <- c(total, freetext, nlp, comp_data, private_multisite, 

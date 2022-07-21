@@ -206,10 +206,20 @@ g2 <- stacked_bar(data_source, "Category", "Data_type", order_by_count = FALSE, 
 ggsave(g2, file="../figure/fig4.eps", width=40, height=20, units="cm", dpi=600) 
 ```
 
+Private data source and reported demographics in private data source: 
+
+```{r}
+nrow(df %>% filter(Openly_available_data == 0))
+nrow(df %>% filter(Openly_available_data == 0 & Reported_demographics == 1))
+#df %>% filter(Openly_available_data == 1 & Reported_demographics == 1)
+```
+
+
 ```{r}
 # Get data source counts for paper
 
 ```
+
 ```{r}
 print_summary_table(list(traditional_supervised, deep_supervised, semi_supervised,
                          weakly_supervised, un_supervised, df)) 
@@ -232,9 +242,10 @@ data_unnested <- data_unnested %>%
   mutate(Structured_data_type_unnested = case_when(Structured_data_type_unnested == "Diagnosis" ~ "Diagnoses", TRUE ~ Structured_data_type_unnested)) 
 
 p1 <- horizontal_bar(data_unnested, "Structured_data_type_unnested", 
-                     string_wrap = 20,restrict_count = TRUE, 
+                     string_wrap = 20, restrict_count = TRUE, 
+                     color_grid = color_panel <- pal_simpsons()(8),
                      title = "Structured data type", ylim = 60, label_text = TRUE,
-                     xlab = "Number of articles")
+                     xlab = "Number of articles") 
 
 print_multiple_items(data_unnested, "structured data type")
 
@@ -244,11 +255,12 @@ data_unnested <- data_unnested %>%
   mutate(Unstructured_data_type_unnested = case_when(Unstructured_data_type_unnested == "Clinical notes" ~ "Unspecified", TRUE ~ Unstructured_data_type_unnested))
 p2 <- horizontal_bar(data_unnested, "Unstructured_data_type_unnested", 
                      string_wrap = 20, restrict_count = TRUE, 
+                     color_grid = color_panel <- pal_simpsons()(12),
                      title = "Clinical note type", ylim = 60, label_text = TRUE,
                      xlab = "Number of articles")
 print_multiple_items(data_unnested, "unstructured data type")
 
-plot_grid(p1, p2, ncol = 1, align = "v", axis = "l") 
+plot_grid(p1, p2, ncol = 1, align = "v", axis = "l", labels = c('(a)', '(b)')) 
 ```
 
 \clearpage
@@ -301,6 +313,7 @@ term_unnested <- unnest_string_var(df, "Terminology")
 
 term_unnested <- term_unnested %>% 
   mutate(Terminology_unnested = case_when(Terminology_unnested == "ICD-9/10" ~ "ICD-9; ICD-10",
+                                          Terminology_unnested ==  "ICD-9-CM" ~ "ICD-9",
                                           TRUE ~ Terminology_unnested))
 
 term_unnested <- unnest_string_var(term_unnested, "Terminology_unnested")
